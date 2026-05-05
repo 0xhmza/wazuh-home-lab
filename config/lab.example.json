@@ -12,7 +12,8 @@
     "lab_project_name": "wazuhlab-lab",
     "generator_image_name": "wazuh-home-lab-generator",
     "seed": null,
-    "tick_seconds": 1
+    "tick_seconds": 1,
+    "ui_port": 8765
   },
   "profiles": [
     {

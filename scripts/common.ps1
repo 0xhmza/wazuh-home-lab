@@ -7,6 +7,22 @@ if ((Test-Path $_dockerDesktopBin) -and ($env:PATH -notlike "*$_dockerDesktopBin
     $env:PATH = "$_dockerDesktopBin;$env:PATH"
 }
 
+# Inject the real Python 3 interpreter before the Windows Store alias stubs.
+# The Store stubs (0-byte python.exe in WindowsApps) return exit code 9009 when
+# no Store Python is installed, so we must ensure the real install comes first.
+$_pythonCandidates = @(
+    "$env:LOCALAPPDATA\Programs\Python\Python313",
+    "$env:LOCALAPPDATA\Programs\Python\Python312",
+    "$env:LOCALAPPDATA\Programs\Python\Python311",
+    "C:\Python313", "C:\Python312", "C:\Python311"
+)
+foreach ($_pyDir in $_pythonCandidates) {
+    if ((Test-Path "$_pyDir\python.exe") -and ($env:PATH -notlike "*$_pyDir*")) {
+        $env:PATH = "$_pyDir;$_pyDir\Scripts;$env:PATH"
+        break
+    }
+}
+
 function Resolve-LabPath {
     param(
         [Parameter(Mandatory = $true)]

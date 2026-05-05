@@ -200,7 +200,8 @@ def sanitize_service_name(value: str) -> str:
 
 
 def render_compose(config: dict, endpoints: list[dict]) -> str:
-    lines = ["services:", "  lab-generator:", f"    image: {config['lab']['generator_image_name']}", "    build:", "      context: ../", "      dockerfile: docker/log-generator/Dockerfile", "    restart: unless-stopped", "    command:", "      - python", "      - app/generate_logs.py", "      - --config", "      - /config/lab-runtime.json", "      - --output-root", "      - /training-data", "    volumes:", "      - ../generated/runtime/lab-runtime.json:/config/lab-runtime.json:ro", "      - ../generated/training-data:/training-data"]
+    ui_port = config["lab"].get("ui_port", 8765)
+    lines = ["services:", "  lab-generator:", f"    image: {config['lab']['generator_image_name']}", "    build:", "      context: ../", "      dockerfile: docker/log-generator/Dockerfile", "    restart: unless-stopped", "    ports:", f"      - \"{ui_port}:8080\"", "    command:", "      - python", "      - app/api.py", "      - --config", "      - /config/lab-runtime.json", "      - --output-root", "      - /training-data", "      - --host", "      - 0.0.0.0", "      - --port", "      - '8080'", "    volumes:", "      - ../generated/runtime/lab-runtime.json:/config/lab-runtime.json:ro", "      - ../generated/training-data:/training-data"]
 
     for endpoint in endpoints:
         service_name = sanitize_service_name(f"agent-{endpoint['name']}")

@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wazuh Home Lab</title>
+<style>
+:root {
+  --bg:       #0f172a;
+  --surface:  #1e293b;
+  --surface2: #293548;
+  --border:   #334155;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --accent:   #38bdf8;
+  --green:    #34d399;
+  --red:      #f87171;
+  --orange:   #fb923c;
+  --amber:    #fbbf24;
+  --purple:   #a78bfa;
+  --pink:     #f472b6;
+  --cyan:     #22d3ee;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:ui-monospace,SFMono-Regular,'Cascadia Code',Consolas,monospace;font-size:13px;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ── HEADER ──────────────────────────────────────────────────────────────── */
+header{
+  display:flex;align-items:center;gap:1rem;
+  padding:0 1rem;height:52px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.logo{font-size:1rem;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:-.02em;}
+.logo span{color:var(--muted);}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:pulse 2s ease-in-out infinite;}
+.status-dot.paused{background:var(--muted);box-shadow:none;animation:none;}
+.status-dot.storm{background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse .6s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.status-label{font-size:.75rem;color:var(--muted);}
+.status-label.storm-text{color:var(--red);font-weight:700;letter-spacing:.05em;}
+.stat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:.2rem .6rem;font-size:.72rem;color:var(--muted);white-space:nowrap;}
+.stat-pill strong{color:var(--text);}
+.spacer{flex:1;}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+  border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.75rem;
+  font-family:inherit;transition:all .15s;white-space:nowrap;}
+.btn:hover{filter:brightness(1.2);}
+.btn-ghost{background:transparent;color:var(--muted);}
+.btn-ghost:hover{color:var(--text);border-color:var(--text);}
+.btn-red{background:#7f1d1d;color:var(--red);border-color:#991b1b;}
+.btn-red:hover{background:#991b1b;}
+.btn-green{background:#064e3b;color:var(--green);border-color:#065f46;}
+.btn-green:hover{background:#065f46;}
+.btn-storm{background:#3b0764;color:var(--purple);border-color:#4c1d95;font-weight:700;}
+.btn-storm.active{background:#4c1d95;color:#fff;border-color:var(--purple);
+  box-shadow:0 0 12px var(--purple);animation:pulse .8s infinite;}
+
+/* ── PRESET BAR ──────────────────────────────────────────────────────────── */
+.preset-bar{
+  display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+  padding:.5rem 1rem;background:var(--bg);border-bottom:1px solid var(--border);
+}
+.preset-bar-label{font-size:.7rem;color:var(--muted);margin-right:.25rem;}
+.preset-btn{
+  display:inline-flex;align-items:center;gap:.4rem;
+  padding:.25rem .6rem;border-radius:5px;border:1px solid;
+  cursor:pointer;font-size:.72rem;font-family:inherit;transition:all .15s;
+}
+.preset-btn:hover{filter:brightness(1.15);transform:translateY(-1px);}
+.preset-btn.active{box-shadow:0 0 8px currentColor;filter:brightness(1.2);}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+.main{display:flex;height:calc(100vh - 52px - 45px);overflow:hidden;}
+
+/* ── ENDPOINTS PANEL ─────────────────────────────────────────────────────── */
+.endpoints-panel{flex:1;overflow-y:auto;padding:.75rem;}
+.endpoints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.75rem;}
+.ep-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;transition:border-color .2s;
+}
+.ep-card:hover{border-color:var(--accent);}
+.ep-card.paused{opacity:.65;}
+.ep-card.storm-card{border-color:var(--red);box-shadow:0 0 8px rgba(248,113,113,.25);}
+.ep-header{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.55rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);
+}
+.ep-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.ep-dot.paused{background:var(--muted);}
+.ep-dot.storm{background:var(--red);animation:pulse .6s infinite;}
+.ep-name{font-weight:700;font-size:.85rem;flex:1;}
+.ep-profile{font-size:.65rem;color:var(--muted);background:var(--surface);
+  border:1px solid var(--border);border-radius:4px;padding:.1rem .4rem;white-space:nowrap;}
+.ep-actions{display:flex;gap:.35rem;}
+.icon-btn{
+  background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;
+  padding:.15rem .3rem;border-radius:4px;transition:color .15s,background .15s;
+}
+.icon-btn:hover{color:var(--text);background:var(--surface);}
+.ep-body{padding:.6rem .75rem;}
+.ep-stats{display:flex;gap:.75rem;margin-bottom:.5rem;}
+.stat{display:flex;flex-direction:column;}
+.stat-val{font-size:1.1rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.stat-lbl{font-size:.65rem;color:var(--muted);}
+.scenario-pills{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem;}
+.sc-pill{
+  font-size:.65rem;padding:.1rem .4rem;border-radius:3px;
+  white-space:nowrap;border:1px solid transparent;
+}
+
+/* ── LIVE FEED ───────────────────────────────────────────────────────────── */
+.feed-panel{
+  width:400px;min-width:320px;display:flex;flex-direction:column;
+  border-left:1px solid var(--border);
+}
+.feed-header{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem .75rem;border-bottom:1px solid var(--border);
+  background:var(--surface);flex-shrink:0;
+}
+.feed-title{font-weight:700;color:var(--accent);font-size:.8rem;}
+.feed-count{font-size:.7rem;color:var(--muted);}
+.feed-controls{display:flex;gap:.35rem;margin-left:auto;}
+.toggle-autoscroll{
+  font-size:.7rem;cursor:pointer;color:var(--muted);background:none;
+  border:1px solid var(--border);border-radius:4px;padding:.15rem .4rem;
+  font-family:inherit;transition:all .15s;
+}
+.toggle-autoscroll.on{color:var(--green);border-color:var(--green);}
+.feed-filter{
+  font-size:.7rem;background:var(--surface2);border:1px solid var(--border);
+  border-radius:4px;color:var(--text);padding:.15rem .4rem;font-family:inherit;
+  cursor:pointer;
+}
+.feed-list{flex:1;overflow-y:auto;padding:.35rem;}
+.feed-item{
+  display:grid;grid-template-columns:auto 1fr;gap:.3rem .5rem;
+  padding:.35rem .4rem;border-radius:5px;margin-bottom:.25rem;
+  border-left:2px solid var(--border);background:var(--surface);
+  transition:opacity .2s;
+  animation:slideIn .15s ease-out;
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(4px);}to{opacity:1;transform:translateX(0);}}
+.feed-item:hover{background:var(--surface2);}
+.feed-badge{
+  font-size:.6rem;padding:.1rem .35rem;border-radius:3px;font-weight:700;
+  white-space:nowrap;align-self:start;
+}
+.feed-meta{font-size:.65rem;color:var(--muted);}
+.feed-msg{
+  grid-column:1/-1;font-size:.65rem;color:#94a3b8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding-top:.1rem;
+}
+
+/* ── DRAWER ──────────────────────────────────────────────────────────────── */
+.drawer-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+}
+.drawer-overlay.open{display:block;}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;
+  background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:201;
+  transform:translateX(100%);transition:transform .25s ease;
+}
+.drawer.open{transform:translateX(0);}
+.drawer-head{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);
+  background:var(--surface2);flex-shrink:0;
+}
+.drawer-title{font-weight:700;font-size:.9rem;flex:1;}
+.drawer-subtitle{font-size:.7rem;color:var(--muted);}
+.drawer-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:.2rem;}
+.drawer-close:hover{color:var(--text);}
+.drawer-body{flex:1;overflow-y:auto;padding:1rem;}
+.drawer-section{margin-bottom:1.25rem;}
+.drawer-section-title{
+  font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:.6rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);
+}
+.slider-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.slider-name{flex:1;font-size:.75rem;color:var(--text);min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.slider-val{width:32px;text-align:right;font-size:.75rem;color:var(--accent);font-weight:700;}
+.slider-range{flex:0 0 120px;}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+.double-slider{display:flex;gap:.5rem;align-items:center;}
+.double-slider label{font-size:.72rem;color:var(--muted);white-space:nowrap;}
+.double-slider input[type=number]{
+  width:60px;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:4px;padding:.2rem .4rem;font-size:.75rem;font-family:inherit;
+}
+.prob-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.prob-row label{font-size:.72rem;color:var(--muted);white-space:nowrap;min-width:120px;}
+.drawer-footer{
+  padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;flex-shrink:0;
+}
+.btn-primary{background:var(--accent);color:#0f172a;border-color:var(--accent);font-weight:700;}
+.btn-primary:hover{background:#7dd3fc;}
+.btn-danger-ghost{background:transparent;color:var(--red);border-color:#7f1d1d;}
+.btn-danger-ghost:hover{background:#7f1d1d;}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;
+  background:#134e4a;border:1px solid var(--green);color:var(--green);
+  border-radius:6px;padding:.5rem 1rem;font-size:.75rem;
+  opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;
+}
+#toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">&#x1F6E1;&#xFE0F; Wazuh <span>Home Lab</span></div>
+  <div id="statusDot" class="status-dot"></div>
+  <div id="statusLabel" class="status-label">running</div>
+  <div class="stat-pill"><strong id="totalEvts">0</strong> events</div>
+  <div class="stat-pill"><strong id="evtPerMin">0</strong> /min</div>
+  <div class="stat-pill"><strong id="epCount">0</strong> endpoints</div>
+  <div class="spacer"></div>
+  <button class="btn btn-green" onclick="globalAction('resume')">&#x25B6; Resume All</button>
+  <button class="btn btn-red"   onclick="globalAction('pause')">&#x23F8; Pause All</button>
+  <button id="stormBtn" class="btn btn-storm" onclick="toggleStorm()">&#x26A1; STORM</button>
+</header>
+
+<!-- ── PRESET BAR ─────────────────────────────────────────────────────────── -->
+<div class="preset-bar" id="presetBar">
+  <span class="preset-bar-label">PRESETS &rsaquo;</span>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+  <div class="endpoints-panel">
+    <div class="endpoints-grid" id="endpointsGrid">
+      <div style="color:var(--muted);padding:2rem;">Loading endpoints&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── LIVE FEED ────────────────────────────────────────────────────────── -->
+  <div class="feed-panel">
+    <div class="feed-header">
+      <span class="feed-title">&#x1F4E1; Live Events</span>
+      <span class="feed-count" id="feedCount">0</span>
+      <div class="feed-controls">
+        <select class="feed-filter" id="feedFilter" onchange="filterFeed()">
+          <option value="">All endpoints</option>
+        </select>
+        <button class="toggle-autoscroll on" id="scrollBtn" onclick="toggleScroll()">&#x2193; auto</button>
+      </div>
+    </div>
+    <div class="feed-list" id="feedList"></div>
+  </div>
+</div>
+
+<!-- ── DRAWER ─────────────────────────────────────────────────────────────── -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-title" id="drawerTitle">Edit Endpoint</div>
+      <div class="drawer-subtitle" id="drawerSub"></div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">&#x2715;</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary" onclick="saveDrawer()">&#x2713; Apply Changes</button>
+    <button class="btn btn-ghost" onclick="closeDrawer()">Cancel</button>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ── state ─────────────────────────────────────────────────────────────────────
+const S = {
+  endpoints: [],
+  status: { global_paused: false, storm_mode: false, total_events: 0, events_last_minute: 0 },
+  scenarios: [],
+  presets: [],
+  autoScroll: true,
+  feedFilter: '',
+  feedTotal: 0,
+  currentEp: null,   // endpoint being edited in drawer
+};
+
+// ── scenario → category colour mapping ───────────────────────────────────────
+const CAT_COLORS = {
+  auth:      '#f87171',
+  privesc:   '#fb923c',
+  web:       '#a78bfa',
+  network:   '#22d3ee',
+  persistence:'#fbbf24',
+  discovery: '#60a5fa',
+  lateral:   '#f472b6',
+  exfil:     '#fb923c',
+  impact:    '#ef4444',
+  noise:     '#475569',
+};
+
+function catColor(cat) { return CAT_COLORS[cat] || '#64748b'; }
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error(`${method} ${path} → ${r.status}`);
+  return r.json();
+}
+const GET  = path       => api('GET',   path);
+const POST = path       => api('POST',  path);
+const PATCH= (path, b) => api('PATCH', path, b);
+
+// ── toast ─────────────────────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  [S.scenarios, S.presets] = await Promise.all([
+    GET('/api/scenarios'),
+    GET('/api/presets'),
+  ]);
+  renderPresets();
+  await refresh();
+  setInterval(refresh, 2000);
+  connectSSE();
+}
+
+// ── polling refresh ───────────────────────────────────────────────────────────
+async function refresh() {
+  try {
+    [S.status, S.endpoints] = await Promise.all([
+      GET('/api/status'),
+      GET('/api/endpoints'),
+    ]);
+    applyStatus();
+    renderEndpoints();
+    updateFeedFilter();
+  } catch(e) { /* backend may be restarting */ }
+}
+
+function applyStatus() {
+  const { global_paused, storm_mode, total_events, events_last_minute, endpoint_count } = S.status;
+  const dot   = document.getElementById('statusDot');
+  const label = document.getElementById('statusLabel');
+  dot.className = 'status-dot' + (storm_mode ? ' storm' : global_paused ? ' paused' : '');
+  label.className = 'status-label' + (storm_mode ? ' storm-text' : '');
+  label.textContent = storm_mode ? '⚡ STORM MODE' : global_paused ? 'paused' : 'running';
+  document.getElementById('totalEvts').textContent = total_events.toLocaleString();
+  document.getElementById('evtPerMin').textContent = events_last_minute.toLocaleString();
+  document.getElementById('epCount').textContent   = endpoint_count;
+
+  const stormBtn = document.getElementById('stormBtn');
+  stormBtn.classList.toggle('active', storm_mode);
+
+  // Storm mode — pulse header
+  document.querySelector('header').style.borderBottomColor = storm_mode ? 'var(--red)' : 'var(--border)';
+}
+
+// ── endpoints grid ────────────────────────────────────────────────────────────
+function renderEndpoints() {
+  const grid = document.getElementById('endpointsGrid');
+  const storm = S.status.storm_mode;
+
+  // Preserve cards that already exist (DOM diff by name)
+  const existingNames = new Set([...grid.querySelectorAll('.ep-card')].map(c => c.dataset.name));
+  const newNames = new Set(S.endpoints.map(e => e.name));
+
+  // Remove stale cards
+  existingNames.forEach(n => { if (!newNames.has(n)) grid.querySelector(`[data-name="${n}"]`).remove(); });
+
+  S.endpoints.forEach(ep => {
+    let card = grid.querySelector(`[data-name="${ep.name}"]`);
+    if (!card) {
+      card = buildCard(ep);
+      grid.appendChild(card);
+    }
+    updateCard(card, ep, storm);
+  });
+}
+
+function buildCard(ep) {
+  const card = document.createElement('div');
+  card.className = 'ep-card';
+  card.dataset.name = ep.name;
+  card.innerHTML = `
+    <div class="ep-header">
+      <div class="ep-dot"></div>
+      <div class="ep-name">${ep.name}</div>
+      <div class="ep-profile">${ep.profile}</div>
+      <div class="ep-actions">
+        <button class="icon-btn" title="Pause / Resume" onclick="togglePause('${ep.name}')">&#x23F8;</button>
+        <button class="icon-btn" title="Edit scenarios" onclick="openDrawer('${ep.name}')">&#x2699;</button>
+      </div>
+    </div>
+    <div class="ep-body">
+      <div class="ep-stats">
+        <div class="stat"><div class="stat-val" data-field="total">0</div><div class="stat-lbl">total events</div></div>
+        <div class="stat"><div class="stat-val" data-field="epm">0</div><div class="stat-lbl">events / min</div></div>
+        <div class="stat"><div class="stat-val" data-field="interval">—</div><div class="stat-lbl">interval (s)</div></div>
+      </div>
+      <div class="scenario-pills" data-field="pills"></div>
+    </div>`;
+  return card;
+}
+
+function updateCard(card, ep, storm) {
+  card.className = 'ep-card' + (ep.paused ? ' paused' : '') + (storm && !ep.paused ? ' storm-card' : '');
+  const dot = card.querySelector('.ep-dot');
+  dot.className = 'ep-dot' + (storm && !ep.paused ? ' storm' : ep.paused ? ' paused' : '');
+  card.querySelector('[data-field=total]').textContent = ep.total_events.toLocaleString();
+  card.querySelector('[data-field=epm]').textContent   = ep.events_last_minute;
+  card.querySelector('[data-field=interval]').textContent =
+    `${ep.interval_seconds[0]}–${ep.interval_seconds[1]}`;
+
+  // Pause/resume icon
+  const btn = card.querySelector('.icon-btn');
+  btn.title   = ep.paused ? 'Resume' : 'Pause';
+  btn.innerHTML = ep.paused ? '&#x25B6;' : '&#x23F8;';
+
+  // Scenario pills (only active ones)
+  const pills = card.querySelector('[data-field=pills]');
+  pills.innerHTML = '';
+  Object.entries(ep.scenarios)
+    .filter(([, w]) => w > 0)
+    .sort(([,a],[,b]) => b - a)
+    .slice(0, 8)
+    .forEach(([name, weight]) => {
+      const meta = S.scenarios.find(s => s.name === name) || {};
+      const color = catColor(meta.category);
+      const pill = document.createElement('span');
+      pill.className = 'sc-pill';
+      pill.style.cssText = `background:${color}22;color:${color};border-color:${color}44;`;
+      pill.textContent = (meta.label || name).replace(/^(ssh|web|lateral|sudo|pam|generic|kernel|system|apache|nginx|openvpn|suricata|port|new|cron|sensitive|large|iptables|process)\s*/i, '') + ` ×${weight}`;
+      pills.appendChild(pill);
+    });
+}
+
+// ── presets ───────────────────────────────────────────────────────────────────
+function renderPresets() {
+  const bar = document.getElementById('presetBar');
+  const existing = bar.querySelectorAll('.preset-btn');
+  existing.forEach(e => e.remove());
+  S.presets.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.dataset.name = p.name;
+    btn.style.cssText = `color:${p.color};border-color:${p.color}66;background:${p.color}22;`;
+    btn.innerHTML = `${p.icon || '▶'} ${p.label || p.name}`;
+    btn.title = p.description || '';
+    btn.onclick = () => applyPreset(p.name);
+    bar.appendChild(btn);
+  });
+}
+
+async function applyPreset(name) {
+  await POST(`/api/presets/${name}`);
+  toast(`Preset "${name}" applied to all endpoints`);
+  await refresh();
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.name === name));
+}
+
+// ── global controls ───────────────────────────────────────────────────────────
+async function globalAction(action) {
+  await POST(`/api/global/${action}`);
+  toast(action === 'pause' ? 'All endpoints paused' : 'All endpoints resumed');
+  await refresh();
+}
+
+let _stormActive = false;
+async function toggleStorm() {
+  _stormActive = !_stormActive;
+  await POST(_stormActive ? '/api/global/storm' : '/api/global/normal');
+  toast(_stormActive ? '⚡ STORM MODE activated' : 'Storm mode deactivated');
+  await refresh();
+}
+
+// ── per-endpoint pause ────────────────────────────────────────────────────────
+async function togglePause(name) {
+  const ep = S.endpoints.find(e => e.name === name);
+  await POST(`/api/endpoints/${name}/${ep?.paused ? 'resume' : 'pause'}`);
+  await refresh();
+}
+
+// ── drawer ────────────────────────────────────────────────────────────────────
+function openDrawer(name) {
+  const ep = S.endpoints.find(e => e.name === name);
+  if (!ep) return;
+  S.currentEp = ep;
+  document.getElementById('drawerTitle').textContent = ep.name;
+  document.getElementById('drawerSub').textContent   = ep.profile;
+  renderDrawerBody(ep);
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  S.currentEp = null;
+}
+
+function renderDrawerBody(ep) {
+  const body = document.getElementById('drawerBody');
+
+  // Build scenario weight section
+  let html = `<div class="drawer-section">
+    <div class="drawer-section-title">Scenario Weights <small style="color:var(--muted);font-size:.65rem;">(0 = disabled)</small></div>`;
+
+  // Group by category
+  const byCat = {};
+  S.scenarios.forEach(s => {
+    const cat = s.category || 'noise';
+    (byCat[cat] = byCat[cat] || []).push(s);
+  });
+
+  Object.entries(byCat).sort().forEach(([cat, list]) => {
+    const color = catColor(cat);
+    html += `<div style="margin-bottom:.75rem;">
+      <div style="font-size:.65rem;color:${color};text-transform:uppercase;margin-bottom:.35rem;">${cat}</div>`;
+    list.forEach(s => {
+      const w = ep.scenarios[s.name] ?? 0;
+      html += `<div class="slider-row">
+        <span class="slider-name" title="${s.description || s.name}">${s.label || s.name}</span>
+        <input class="slider-range" type="range" min="0" max="50" step="1" value="${w}"
+               data-sc="${s.name}" oninput="this.nextElementSibling.textContent=this.value">
+        <span class="slider-val">${w}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  // Timing section
+  const [imin, imax] = ep.interval_seconds;
+  const bp = Math.round((ep.burst_probability || 0) * 100);
+  const [bmin, bmax] = ep.burst_size;
+
+  html += `<div class="drawer-section">
+    <div class="drawer-section-title">Timing</div>
+    <div class="double-slider" style="margin-bottom:.6rem;">
+      <label>Interval (s)&nbsp;min</label>
+      <input type="number" id="iMin" min="0.5" max="300" step="0.5" value="${imin}">
+      <label>max</label>
+      <input type="number" id="iMax" min="1"   max="600" step="1"   value="${imax}">
+    </div>
+    <div class="prob-row">
+      <label>Burst probability</label>
+      <input type="range" min="0" max="100" step="5" value="${bp}"
+             oninput="document.getElementById('bpVal').textContent=this.value+'%'" style="flex:1;">
+      <span id="bpVal" style="width:36px;text-align:right;color:var(--accent);">${bp}%</span>
+    </div>
+    <div class="double-slider">
+      <label>Burst size&nbsp;min</label>
+      <input type="number" id="bMin" min="1" max="50" step="1" value="${bmin}">
+      <label>max</label>
+      <input type="number" id="bMax" min="1" max="100" step="1" value="${bmax}">
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+}
+
+async function saveDrawer() {
+  const ep = S.currentEp;
+  if (!ep) return;
+
+  const scenarios = {};
+  document.querySelectorAll('#drawerBody [data-sc]').forEach(el => {
+    scenarios[el.dataset.sc] = parseInt(el.value, 10);
+  });
+
+  const iMin = parseFloat(document.getElementById('iMin').value);
+  const iMax = parseFloat(document.getElementById('iMax').value);
+  const bpEl = document.querySelector('#drawerBody .prob-row input[type=range]');
+  const bp   = parseInt(bpEl.value, 10) / 100;
+  const bMin = parseInt(document.getElementById('bMin').value, 10);
+  const bMax = parseInt(document.getElementById('bMax').value, 10);
+
+  await PATCH(`/api/endpoints/${ep.name}`, {
+    scenarios,
+    interval_seconds: [Math.min(iMin, iMax), Math.max(iMin, iMax)],
+    burst_probability: bp,
+    burst_size: [Math.min(bMin, bMax), Math.max(bMin, bMax)],
+  });
+  toast(`✓ ${ep.name} updated`);
+  closeDrawer();
+  await refresh();
+}
+
+// ── live feed ─────────────────────────────────────────────────────────────────
+const MAX_FEED = 200;
+const _feed = [];
+
+function connectSSE() {
+  const source = new EventSource('/api/events/stream');
+  source.onmessage = ev => {
+    try { appendEvent(JSON.parse(ev.data)); } catch(_) {}
+  };
+  source.onerror = () => setTimeout(connectSSE, 3000);
+}
+
+function appendEvent(ev) {
+  _feed.push(ev);
+  if (_feed.length > MAX_FEED) _feed.shift();
+  S.feedTotal++;
+  document.getElementById('feedCount').textContent = S.feedTotal.toLocaleString();
+  renderFeedItem(ev);
+}
+
+function renderFeedItem(ev) {
+  if (S.feedFilter && ev.endpoint !== S.feedFilter) return;
+
+  const meta  = S.scenarios.find(s => s.name === ev.scenario) || {};
+  const color = catColor(meta.category);
+  const label = (meta.label || ev.scenario)
+    .replace(/^(ssh|web|lateral|sudo|pam|generic|kernel|system|apache|nginx|openvpn|suricata|port|new|cron|sensitive|large|iptables|process)\s*/i, '');
+
+  const ts = new Date(ev.ts).toLocaleTimeString();
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.style.borderLeftColor = color;
+  item.dataset.endpoint = ev.endpoint;
+  item.innerHTML = `
+    <span class="feed-badge" style="background:${color}33;color:${color};">${label}</span>
+    <span class="feed-meta">${ev.endpoint} &middot; ${ts}</span>
+    <span class="feed-msg" title="${escHtml(ev.message)}">${escHtml(ev.message)}</span>`;
+
+  const list = document.getElementById('feedList');
+  list.appendChild(item);
+
+  // Trim DOM
+  while (list.children.length > MAX_FEED) list.removeChild(list.firstChild);
+
+  if (S.autoScroll) list.scrollTop = list.scrollHeight;
+}
+
+function filterFeed() {
+  S.feedFilter = document.getElementById('feedFilter').value;
+  const list = document.getElementById('feedList');
+  [...list.children].forEach(el => {
+    el.style.display = (!S.feedFilter || el.dataset.endpoint === S.feedFilter) ? '' : 'none';
+  });
+}
+
+function updateFeedFilter() {
+  const sel = document.getElementById('feedFilter');
+  const cur = sel.value;
+  const names = S.endpoints.map(e => e.name);
+  // Add missing options
+  names.forEach(n => {
+    if (!sel.querySelector(`option[value="${n}"]`)) {
+      const opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      sel.appendChild(opt);
+    }
+  });
+  sel.value = cur;
+}
+
+function toggleScroll() {
+  S.autoScroll = !S.autoScroll;
+  const btn = document.getElementById('scrollBtn');
+  btn.className = 'toggle-autoscroll' + (S.autoScroll ? ' on' : '');
+  btn.innerHTML = S.autoScroll ? '&#x2193; auto' : '&#x23F8; paused';
+  if (S.autoScroll) document.getElementById('feedList').scrollTop = 1e9;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
