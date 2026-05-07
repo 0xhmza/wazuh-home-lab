@@ -10,24 +10,26 @@ A self-contained, fully configurable Wazuh training environment that spins up th
 flowchart TB
   subgraph docker["Docker host"]
     subgraph core["Core stack (wazuhlab-core)"]
-      manager["wazuh.manager<br/>:1514 :1515<br/>:514 :55000"]
-      indexer["wazuh.indexer<br/>:9200"]
-      dashboard["wazuh.dashboard<br/>:443"]
+      direction TB
+      manager["wazuh.manager\n:1514 :1515 :514 :55000"]
+      indexer["wazuh.indexer :9200"]
+      dashboard["wazuh.dashboard :443"]
+      manager --- indexer --- dashboard
     end
 
     network["wazuhlab-core_default network"]
 
     subgraph lab["Lab overlay (wazuhlab-lab)"]
-      generator["lab-generator<br/>(Python)<br/>writes logs to shared bind mounts"]
-      agents["agent-<name> × N<br/>Wazuh agent<br/>reads logs → manager"]
+      direction TB
+      generator["lab-generator (Python)"]
+      agents["agent-&lt;name&gt; × N\nWazuh agent"]
     end
   end
 
   manager --- network
   network --- generator
-  network --- agents
-  generator --> agents
-  agents --> manager
+  generator -->|writes logs| agents
+  agents -->|events| manager
 ```
 
 The **core stack** is the upstream `wazuh/wazuh-docker` single-node deployment, cloned on demand and started as-is. The **lab overlay** is generated from your config file and runs on the same Docker network, so every synthetic agent can enroll with and send events to the real manager.
