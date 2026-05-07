@@ -19,7 +19,7 @@ flowchart TB
 
     subgraph lab["Lab overlay (wazuhlab-lab)"]
       generator["lab-generator<br/>(Python)<br/>writes logs to shared bind mounts"]
-      agents["agent-&lt;name&gt; × N<br/>Wazuh agent<br/>reads logs → manager"]
+      agents["agent-<name> × N<br/>Wazuh agent<br/>reads logs → manager"]
     end
   end
 
