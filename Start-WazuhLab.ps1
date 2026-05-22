@@ -603,19 +603,43 @@ if ($Script:Warns -gt 0) {
     Write-Host ""
 }
 
-try {
-    $answer = Read-Host "  Launch Wazuh lab now? [Y/n]"
-} catch {
-    $answer = "y"
+Write-Host "  How should synthetic endpoints connect to Wazuh?" -ForegroundColor White
+Write-Host ""
+Write-Host "    [1]  Ghost mode       — one lightweight Python process, no extra Docker containers" -ForegroundColor Cyan
+Write-Host "         (recommended for most machines: fast, low memory)" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "    [2]  Container mode   — one wazuh-agent Docker container per endpoint" -ForegroundColor White
+Write-Host "         (original behaviour: more realistic, higher resource usage)" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "    [3]  Skip             — exit without starting" -ForegroundColor DarkGray
+Write-Host ""
+
+$modeChoice = ""
+while ($modeChoice -notin @("1","2","3")) {
+    try {
+        $modeChoice = (Read-Host "  Enter 1, 2, or 3").Trim()
+    } catch {
+        $modeChoice = "3"
+    }
+    if ($modeChoice -notin @("1","2","3")) {
+        Write-Host "  Please enter 1, 2, or 3." -ForegroundColor Yellow
+    }
 }
 
-if ($answer -eq "" -or $answer -match "^[Yy]") {
+if ($modeChoice -eq "3") {
     Write-Host ""
-    Write-Host "  Starting Wazuh lab — this may take a few minutes on first run..." -ForegroundColor Cyan
+    Write-Host "  Skipped. Run .\scripts\up.ps1 -ConfigPath $resolvedConfigPath when ready." -ForegroundColor DarkGray
+    Write-Host ""
+} else {
+    $chosenMode = if ($modeChoice -eq "1") { "ghost" } else { "container" }
+    $modeLabel  = if ($modeChoice -eq "1") { "Ghost mode (lightweight)" } else { "Container mode (full)" }
+
+    Write-Host ""
+    Write-Host "  Starting Wazuh lab in $modeLabel — this may take a few minutes on first run..." -ForegroundColor Cyan
     Write-Host ""
 
     try {
-        & (Join-Path $RepoRoot "scripts\up.ps1") -ConfigPath $resolvedConfigPath
+        & (Join-Path $RepoRoot "scripts\up.ps1") -ConfigPath $resolvedConfigPath -AgentMode $chosenMode
     } catch {
         Write-Host ""
         Write-Host "  [FAIL] Lab failed to start: $($_.Exception.Message)" -ForegroundColor Red
@@ -631,11 +655,8 @@ if ($answer -eq "" -or $answer -match "^[Yy]") {
     Write-Host "  Generator : http://localhost:$uiPort" -ForegroundColor Green
     Write-Host ("  " + [string]([char]0x2550) * 58) -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  Agents enroll 10-30 s after the manager is ready." -ForegroundColor DarkGray
+    Write-Host "  Agents enroll 30-90 s after the manager is ready." -ForegroundColor DarkGray
     Write-Host "  Check Agent management → Summary in the dashboard." -ForegroundColor DarkGray
-    Write-Host ""
-} else {
-    Write-Host ""
-    Write-Host "  Skipped. Run .\scripts\up.ps1 -ConfigPath $resolvedConfigPath when ready." -ForegroundColor DarkGray
+    Write-Host "  Run .\scripts\diagnose.ps1 to verify the full pipeline." -ForegroundColor DarkGray
     Write-Host ""
 }
