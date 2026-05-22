@@ -13,7 +13,9 @@
     "generator_image_name": "wazuh-home-lab-generator",
     "seed": null,
     "tick_seconds": 1,
-    "ui_port": 8765
+    "ui_port": 8765,
+    "core_network": null,
+    "agent_mode": "container"
   },
   "profiles": [
     {
@@ -25,23 +27,25 @@
         "linux-workstation"
       ],
       "interval_seconds": [
-        2,
-        8
+        1,
+        4
       ],
-      "burst_probability": 0.18,
+      "burst_probability": 0.30,
       "burst_size": [
         4,
-        10
+        12
       ],
       "scenarios": {
         "ssh_invalid_user": 18,
         "ssh_failed_password": 22,
+        "ssh_accepted": 5,
         "sudo_command": 12,
         "pam_su_failure": 8,
         "kernel_usb_event": 6,
         "cron_session": 8,
         "systemd_service_failure": 7,
-        "generic_syslog_noise": 19
+        "dataset_replay": 14,
+        "generic_syslog_noise": 12
       }
     },
     {
@@ -54,21 +58,25 @@
       ],
       "interval_seconds": [
         1,
-        5
+        3
       ],
-      "burst_probability": 0.24,
+      "burst_probability": 0.40,
       "burst_size": [
         6,
-        14
+        16
       ],
       "scenarios": {
         "apache_404": 18,
         "apache_500": 7,
         "nginx_auth_failure": 14,
-        "ssh_failed_password": 16,
-        "suricata_alert": 16,
-        "systemd_service_failure": 8,
-        "generic_syslog_noise": 21
+        "ssh_failed_password": 12,
+        "suricata_alert": 14,
+        "web_sql_injection": 8,
+        "web_lfi_attempt": 6,
+        "web_log4j_attempt": 5,
+        "systemd_service_failure": 6,
+        "dataset_replay": 18,
+        "generic_syslog_noise": 12
       }
     },
     {
@@ -80,22 +88,24 @@
         "vpn-jumpbox"
       ],
       "interval_seconds": [
-        2,
-        6
+        1,
+        4
       ],
-      "burst_probability": 0.30,
+      "burst_probability": 0.40,
       "burst_size": [
         5,
-        12
+        14
       ],
       "scenarios": {
         "ssh_failed_password": 24,
-        "ssh_invalid_user": 12,
+        "ssh_invalid_user": 14,
         "sudo_command": 10,
         "pam_su_failure": 10,
-        "openvpn_tls_error": 16,
-        "suricata_alert": 10,
-        "generic_syslog_noise": 18
+        "openvpn_tls_error": 14,
+        "suricata_alert": 12,
+        "lateral_ssh_hop": 6,
+        "dataset_replay": 14,
+        "generic_syslog_noise": 12
       }
     }
   ]

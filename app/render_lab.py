@@ -9,6 +9,7 @@ from scenarios import SUPPORTED_SCENARIO_NAMES
 
 
 DEFAULT_LAB = {
+    "agent_mode": "container",
     "core_project_name": "wazuhlab-core",
     "generator_image_name": "wazuh-home-lab-generator",
     "lab_project_name": "wazuhlab-lab",
@@ -64,6 +65,7 @@ def normalize_config(raw: dict) -> dict:
     require(isinstance(lab["lab_project_name"], str) and lab["lab_project_name"], "lab.lab_project_name is required.")
     require(isinstance(lab["generator_image_name"], str) and lab["generator_image_name"], "lab.generator_image_name is required.")
     require(isinstance(lab["tick_seconds"], int) and lab["tick_seconds"] > 0, "lab.tick_seconds must be a positive integer.")
+    require(lab["agent_mode"] in {"container", "ghost"}, "lab.agent_mode must be 'container' or 'ghost'.")
 
     normalized_profiles = []
     for profile in profiles:
@@ -109,13 +111,14 @@ def normalize_config(raw: dict) -> dict:
         )
 
     version = wazuh["version"].lstrip("v")
+    core_network = wazuh.get("core_network") or lab.get("core_network") or f"{lab['core_project_name']}_default"
     return {
         "lab": lab,
         "profiles": normalized_profiles,
         "supported_scenarios": list(SUPPORTED_SCENARIO_NAMES),
         "wazuh": {
             **wazuh,
-            "core_network": f"{lab['core_project_name']}_default",
+            "core_network": core_network,
             "version": version,
         },
     }
@@ -201,32 +204,97 @@ def sanitize_service_name(value: str) -> str:
 
 def render_compose(config: dict, endpoints: list[dict]) -> str:
     ui_port = config["lab"].get("ui_port", 8765)
-    lines = ["services:", "  lab-generator:", f"    image: {config['lab']['generator_image_name']}", "    build:", "      context: ../", "      dockerfile: docker/log-generator/Dockerfile", "    restart: unless-stopped", "    ports:", f"      - \"{ui_port}:8080\"", "    command:", "      - python", "      - app/api.py", "      - --config", "      - /config/lab-runtime.json", "      - --output-root", "      - /training-data", "      - --host", "      - 0.0.0.0", "      - --port", "      - '8080'", "    volumes:", "      - ../generated/runtime/lab-runtime.json:/config/lab-runtime.json:ro", "      - ../generated/training-data:/training-data"]
+    datasets_dir_present = config["lab"].get("datasets_dir_present", False)
+    wazuh = config["wazuh"]
+    agent_mode = config["lab"].get("agent_mode", "container")
+    is_ghost = agent_mode == "ghost"
 
-    for endpoint in endpoints:
-        service_name = sanitize_service_name(f"agent-{endpoint['name']}")
-        lines.extend(
-            [
-                f"  {service_name}:",
-                f"    image: wazuh/wazuh-agent:{config['wazuh']['version']}",
-                f"    hostname: {endpoint['name']}",
-                "    restart: always",
-                "    depends_on:",
-                "      - lab-generator",
-                "    environment:",
-                f"      - WAZUH_MANAGER_SERVER={config['wazuh']['manager_address']}",
-                "    volumes:",
-                f"      - ../generated/agents/{endpoint['name']}/ossec.conf:/wazuh-config-mount/etc/ossec.conf:ro",
-                f"      - ../generated/training-data/{endpoint['name']}:/training-data",
-            ]
-        )
+    lines: list[str] = [
+        "services:",
+        "  lab-generator:",
+        f"    image: {config['lab']['generator_image_name']}",
+        "    build:",
+        "      context: ../",
+        "      dockerfile: docker/log-generator/Dockerfile",
+        "    restart: unless-stopped",
+        "    ports:",
+        f"      - \"{ui_port}:8080\"",
+        "    command:",
+        "      - python",
+        "      - app/api.py",
+        "      - --config",
+        "      - /config/lab-runtime.json",
+        "      - --output-root",
+        "      - /training-data",
+        "      - --datasets-dir",
+        "      - /datasets",
+        "      - --host",
+        "      - 0.0.0.0",
+        "      - --port",
+        "      - '8080'",
+    ]
+    if is_ghost:
+        lines.append("      - --ghost-sender")
+    lines.extend(
+        [
+            "    volumes:",
+            "      - ../generated/runtime/lab-runtime.json:/config/lab-runtime.json:ro",
+            "      - ../generated/training-data:/training-data",
+        ]
+    )
+    if datasets_dir_present:
+        lines.append("      - ../datasets:/datasets:ro")
+    lines.extend(["    networks:", "      - wazuh_core"])
 
-        if config["wazuh"]["registration_password"]:
-            lines.append(f"      - ../generated/agents/{endpoint['name']}/authd.pass:/var/ossec/etc/authd.pass:ro")
+    if not is_ghost:
+        for endpoint in endpoints:
+            service_name = sanitize_service_name(f"agent-{endpoint['name']}")
+            groups_csv = ",".join(endpoint["groups"])
+            lines.extend(
+                [
+                    f"  {service_name}:",
+                    f"    image: wazuh/wazuh-agent:{wazuh['version']}",
+                    f"    hostname: {endpoint['name']}",
+                    "    restart: always",
+                    "    depends_on:",
+                    "      - lab-generator",
+                    "    environment:",
+                    f"      - WAZUH_MANAGER={wazuh['manager_address']}",
+                    f"      - WAZUH_MANAGER_PORT={wazuh['manager_port']}",
+                    f"      - WAZUH_PROTOCOL={wazuh['manager_protocol']}",
+                    f"      - WAZUH_REGISTRATION_SERVER={wazuh['manager_address']}",
+                    f"      - WAZUH_REGISTRATION_PORT={wazuh['registration_port']}",
+                    f"      - WAZUH_AGENT_NAME={endpoint['name']}",
+                    f"      - WAZUH_AGENT_GROUP={groups_csv}",
+                ]
+            )
+            if wazuh["registration_password"]:
+                lines.append("      - WAZUH_REGISTRATION_PASSWORD_PATH=/var/ossec/etc/authd.pass")
 
-        lines.extend(["    networks:", "      - wazuh_core"])
+            lines.extend(
+                [
+                    "    volumes:",
+                    f"      - ../generated/agents/{endpoint['name']}/ossec.conf:/wazuh-config-mount/etc/ossec.conf:ro",
+                    f"      - ../generated/training-data/{endpoint['name']}:/training-data",
+                ]
+            )
+            if wazuh["registration_password"]:
+                lines.append(
+                    f"      - ../generated/agents/{endpoint['name']}/authd.pass:/var/ossec/etc/authd.pass:ro"
+                )
 
-    lines.extend(["", "networks:", "  wazuh_core:", "    external: true", f"    name: {config['wazuh']['core_network']}", ""])
+            lines.extend(["    networks:", "      - wazuh_core"])
+
+    lines.extend(
+        [
+            "",
+            "networks:",
+            "  wazuh_core:",
+            "    external: true",
+            f"    name: {config['wazuh']['core_network']}",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -235,19 +303,38 @@ def write_file(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def render(config_path: Path, repo_root: Path) -> tuple[Path, int]:
+def render(
+    config_path: Path,
+    repo_root: Path,
+    core_network_override: str | None = None,
+) -> tuple[Path, int]:
     config = normalize_config(load_config(config_path))
+    if core_network_override:
+        config["wazuh"]["core_network"] = core_network_override
+
+    datasets_dir = repo_root / "datasets"
+    config["lab"]["datasets_dir_present"] = datasets_dir.exists()
+
     endpoints = expand_endpoints(config)
 
     generated_root = repo_root / "generated"
     runtime_config_path = generated_root / "runtime" / "lab-runtime.json"
     compose_path = generated_root / "lab-compose.yml"
 
-    runtime_payload = {
+    runtime_payload: dict = {
         "seed": config["lab"]["seed"],
         "tick_seconds": config["lab"]["tick_seconds"],
         "endpoints": endpoints,
     }
+
+    if config["lab"].get("agent_mode") == "ghost":
+        runtime_payload["ghost_sender"] = {
+            "manager_address": config["wazuh"]["manager_address"],
+            "manager_port": config["wazuh"]["manager_port"],
+            "manager_protocol": config["wazuh"]["manager_protocol"],
+            "registration_port": config["wazuh"]["registration_port"],
+            "registration_password": config["wazuh"]["registration_password"],
+        }
 
     write_file(runtime_config_path, json.dumps(runtime_payload, indent=2) + "\n")
     write_file(compose_path, render_compose(config, endpoints))
@@ -269,12 +356,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Render the Wazuh home lab overlay stack.")
     parser.add_argument("--config", required=True, type=Path, help="Path to the lab JSON config.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parent.parent, help="Repository root.")
+    parser.add_argument(
+        "--core-network",
+        default=None,
+        help="Override the auto-derived Wazuh core Docker network name. "
+        "Use this when an existing Wazuh stack is running with a different project name.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    compose_path, endpoint_count = render(args.config.resolve(), args.repo_root.resolve())
+    compose_path, endpoint_count = render(
+        args.config.resolve(),
+        args.repo_root.resolve(),
+        core_network_override=args.core_network,
+    )
     print(f"Rendered {endpoint_count} endpoints to {compose_path}")
     return 0
 

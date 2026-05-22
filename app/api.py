@@ -15,9 +15,11 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from engine import GeneratorEngine
+from ghost_sender import GhostSender
 
-# Module-level engine; initialised by main() before uvicorn starts.
+# Module-level singletons; initialised by main() before uvicorn starts.
 _engine: GeneratorEngine | None = None
+_ghost_sender: GhostSender | None = None
 
 _STATIC = Path(__file__).parent / "static"
 
@@ -27,7 +29,11 @@ _STATIC = Path(__file__).parent / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _engine.start()  # type: ignore[union-attr]
+    if _ghost_sender is not None:
+        _ghost_sender.start()
     yield
+    if _ghost_sender is not None:
+        _ghost_sender.stop()
     _engine.stop()  # type: ignore[union-attr]
 
 
@@ -46,7 +52,10 @@ async def ui():
 
 @app.get("/api/status")
 async def api_status():
-    return _engine.status()  # type: ignore[union-attr]
+    status = _engine.status()  # type: ignore[union-attr]
+    if _ghost_sender is not None:
+        status["ghost_sender"] = _ghost_sender.status()
+    return status
 
 
 # ── endpoints ─────────────────────────────────────────────────────────────────
@@ -179,14 +188,40 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Wazuh Home Lab – web control panel")
     parser.add_argument("--config", required=True, type=Path, help="lab-runtime.json")
     parser.add_argument("--output-root", required=True, type=Path, help="training-data dir")
+    parser.add_argument(
+        "--datasets-dir",
+        type=Path,
+        default=None,
+        help="Optional directory containing real-world log datasets to replay.",
+    )
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument(
+        "--ghost-sender",
+        action="store_true",
+        help="Enable ghost-sender mode: register phantom Wazuh agents and forward "
+             "events directly to the manager, replacing per-endpoint Docker containers. "
+             "Requires 'ghost_sender' block in lab-runtime.json.",
+    )
     args = parser.parse_args()
 
     runtime = json.loads(args.config.read_text(encoding="utf-8"))
 
-    global _engine
-    _engine = GeneratorEngine(runtime, args.output_root)
+    global _engine, _ghost_sender
+    _engine = GeneratorEngine(runtime, args.output_root, datasets_dir=args.datasets_dir)
+
+    if args.ghost_sender:
+        ghost_cfg = runtime.get("ghost_sender")
+        if ghost_cfg is None:
+            raise SystemExit(
+                "ERROR: --ghost-sender requires a 'ghost_sender' block in "
+                "lab-runtime.json. Re-render the lab with lab.agent_mode = 'ghost'."
+            )
+        _ghost_sender = GhostSender(
+            engine=_engine,
+            wazuh_config=ghost_cfg,
+            endpoints=runtime.get("endpoints", []),
+        )
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
