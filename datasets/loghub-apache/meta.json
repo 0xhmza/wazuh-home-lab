@@ -1,0 +1,5 @@
+{
+  "category": "web",
+  "source": "loghub-apache",
+  "notes": "Apache combined access log patterns including web attack traffic — SQLi, LFI, Log4Shell probes, scanners."
+}

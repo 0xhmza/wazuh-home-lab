@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from datasets import Dataset, load_datasets, merge_lines
 from scenarios import SCENARIOS
 
 
@@ -64,11 +65,19 @@ class GeneratorEngine:
 
     MAX_EVENTS = 2000
 
-    def __init__(self, runtime: dict, output_root: Path) -> None:
+    def __init__(self, runtime: dict, output_root: Path, datasets_dir: Path | None = None) -> None:
         seed = runtime.get("seed")
         self._rng = random.Random(seed)
         self._tick = float(runtime.get("tick_seconds", 1))
         self._output_root = output_root
+
+        # Real-world log datasets, if present. Picked into endpoint scenarios
+        # via `dataset_replay`.
+        self._datasets: dict[str, Dataset] = {}
+        self._dataset_lines: list[str] = []
+        if datasets_dir is not None:
+            self._datasets = load_datasets(datasets_dir)
+            self._dataset_lines = merge_lines(self._datasets)
 
         self._endpoints: dict[str, EndpointState] = {
             ep["name"]: EndpointState(ep) for ep in runtime["endpoints"]
@@ -157,7 +166,12 @@ class GeneratorEngine:
         logs_dir.mkdir(parents=True, exist_ok=True)
         log_file = logs_dir / "training.log"
 
-        ep_meta = {"name": ep.name, "profile": ep.profile}
+        ep_meta = {
+            "name": ep.name,
+            "profile": ep.profile,
+            "_dataset_lines": self._dataset_lines,
+            "_datasets": self._datasets,
+        }
         lines: list[tuple[str, str]] = []
         now_dt = datetime.now(timezone.utc)
 
@@ -222,6 +236,11 @@ class GeneratorEngine:
             "endpoint_count": len(self._endpoints),
             "total_events": sum(ep.total_events for ep in self._endpoints.values()),
             "events_last_minute": sum(ep.events_last_minute for ep in self._endpoints.values()),
+            "datasets": [
+                {"name": d.name, "category": d.category, "line_count": len(d.lines)}
+                for d in self._datasets.values()
+            ],
+            "dataset_lines_total": len(self._dataset_lines),
         }
 
     def endpoints(self) -> list[dict]:

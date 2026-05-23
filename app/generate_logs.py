@@ -14,10 +14,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Headless synthetic log generator for Wazuh home lab.")
     parser.add_argument("--config", required=True, type=Path, help="Runtime config JSON from render_lab.py.")
     parser.add_argument("--output-root", required=True, type=Path, help="Root directory for per-endpoint log files.")
+    parser.add_argument(
+        "--datasets-dir",
+        type=Path,
+        default=None,
+        help="Optional directory containing real-world log datasets to replay.",
+    )
     args = parser.parse_args()
 
     runtime = json.loads(args.config.read_text(encoding="utf-8"))
-    engine = GeneratorEngine(runtime, args.output_root)
+    engine = GeneratorEngine(runtime, args.output_root, datasets_dir=args.datasets_dir)
     engine.start()
 
     status = engine.status()

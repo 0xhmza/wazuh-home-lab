@@ -102,13 +102,35 @@ Open **https://localhost** after about 60 seconds.
 
 Agents appear under **Agent management → Summary** as they enroll. Enrollment takes 10–30 seconds per agent after the manager is ready.
 
+The generator's own control panel — pause/resume per agent, attack-preset buttons, live event tail — is at **http://localhost:8765**.
+
 ```powershell
 # Stop overlay + core
 .\scripts\down.ps1 -ConfigPath .\config\lab.json
 
 # Stop overlay only, keep manager/indexer/dashboard running
 .\scripts\down.ps1 -ConfigPath .\config\lab.json -KeepCore
+
+# End-to-end pipeline health check (manager up, agents enrolled, alerts flowing)
+.\scripts\diagnose.ps1 -ConfigPath .\config\lab.json
 ```
+
+### Verifying the pipeline
+
+After 60–90 seconds, open the dashboard and check:
+
+1. **Endpoints summary** — you should see all synthetic agents listed as *Active*.
+2. **Modules → Security events** — alerts flood in continuously. Top fired
+   rules typically include `5710` (sshd invalid user), `5760` (sshd auth
+   failed), `5402` (sudo to root), `81101` (USB attached) and the bundled
+   web/network attack rules.
+3. **`scripts/diagnose.ps1`** — single command that confirms manager, network,
+   agent enrollment, generator output and alert counts in one go.
+
+If endpoints are empty after two minutes, see the *Troubleshooting* section
+below — almost always either (a) the lab overlay couldn't attach to the
+manager's Docker network, or (b) agent groups didn't exist before agents tried
+to enroll.
 
 ---
 
@@ -252,6 +274,40 @@ An array of endpoint profile objects. Each profile generates `count` synthetic a
 
 ---
 
+## Real-world dataset replay
+
+The lab ships with curated samples from publicly available log datasets
+(LogHub OpenSSH, LogHub Linux syslog, Apache combined logs, CIC-IDS2017
+Suricata alerts) under `datasets/`. The `dataset_replay` scenario picks a
+random line from any of those files, strips its original timestamp/hostname,
+and re-emits it as if it came from the replaying endpoint — so Wazuh's stock
+ruleset triggers on real production patterns instead of just synthetic ones.
+
+You can drop your own log files into `datasets/<name>/*.log` and they'll be
+loaded automatically the next time the generator starts. Each subfolder can
+have an optional `meta.json` that sets the UI category:
+
+```json
+{ "category": "auth" }
+```
+
+To pull a much larger volume of real data from HuggingFace:
+
+```powershell
+python -m pip install datasets
+python .\app\fetch_dataset.py `
+  --dataset <hf-user>/<dataset> `
+  --column message `
+  --output datasets\hf-<name> `
+  --max-lines 5000 `
+  --category network
+```
+
+The generator's web UI surfaces the loaded datasets in a tooltip on the
+"dataset lines" pill in the header.
+
+---
+
 ## Available scenarios
 
 | Scenario name | Log source | Example output |
@@ -268,6 +324,7 @@ An array of endpoint profile objects. Each profile generates `count` synthetic a
 | `nginx_auth_failure` | `nginx` | `user "admin": password mismatch, client: 185.x.x.x …` |
 | `suricata_alert` | `suricata` | Full Suricata fast-log format with real-looking SID and classification |
 | `openvpn_tls_error` | `openvpn` | `TLS Error: incoming packet authentication failed from [AF_INET]…` |
+| `dataset_replay` | various | Replay a real-world log line from `datasets/` (LogHub, CIC-IDS, custom) |
 | `generic_syslog_noise` | various | Background noise: NetworkManager, systemd timers, dockerd, NTP sync |
 
 All IPs, ports, usernames, commands, HTTP paths, and user-agents are randomized on every emission. Burst events are timestamped one second apart within the burst.
@@ -280,16 +337,28 @@ All IPs, ports, usernames, commands, HTTP paths, and user-agents are randomized 
 wazuh-home-lab/
 │
 ├── app/
-│   ├── generate_logs.py      # Generator: main loop, event scheduling, burst logic
+│   ├── api.py                # FastAPI control panel served at :8765
+│   ├── datasets.py           # Loader for real-world log datasets
+│   ├── engine.py             # Threaded generator engine
+│   ├── fetch_dataset.py      # Optional HuggingFace dataset → datasets/ fetcher
+│   ├── generate_logs.py      # Headless generator (no UI)
+│   ├── presets.py            # Named attack presets (brute_force, ransomware, …)
 │   ├── render_lab.py         # Renderer: config → ossec.conf + Compose overlay
-│   └── scenarios.py          # All log-format functions and scenario registry
+│   ├── scenarios.py          # All log-format functions and scenario registry
+│   └── static/index.html     # Control panel UI
 │
 ├── config/
 │   └── lab.example.json      # Annotated sample configuration
 │
+├── datasets/                 # Real-world log samples for dataset_replay
+│   ├── loghub-openssh/
+│   ├── loghub-linux/
+│   ├── loghub-apache/
+│   └── cic-ids2017-suricata/
+│
 ├── docker/
 │   └── log-generator/
-│       └── Dockerfile        # python:3.11-slim, copies app/, CMD runs generate_logs.py
+│       └── Dockerfile        # python:3.11-slim, copies app/, CMD runs api.py
 │
 ├── generated/                # Gitignored; all derived output lives here
 │   ├── lab-compose.yml       # Generated Compose overlay
@@ -309,7 +378,8 @@ wazuh-home-lab/
 │   ├── up.ps1                # Full startup: setup-core → render → core up → overlay up
 │   ├── down.ps1              # Stop overlay and/or core stack
 │   ├── setup-core.ps1        # Clone/update wazuh-docker; generate TLS certificates
-│   └── render.ps1            # Run the Python renderer
+│   ├── render.ps1            # Run the Python renderer
+│   └── diagnose.ps1          # End-to-end pipeline health check
 │
 └── vendor/                   # Gitignored; upstream wazuh-docker clone lives here
     └── wazuh-docker/
@@ -368,6 +438,36 @@ Set `"seed": 42` (or any integer) in the `lab` section. Every run with the same 
 ---
 
 ## Troubleshooting
+
+The fastest way to diagnose anything is `scripts/diagnose.ps1`. It checks every
+hop in the pipeline and prints a green/yellow/red status for each.
+
+### "I see no flood of events / no endpoints"
+
+This is almost always one of two issues:
+
+1. **The lab overlay couldn't attach to the manager's Docker network.** The
+   network name depends on the Compose project name used to start the core
+   stack. `up.ps1` auto-detects it from the running manager container — but if
+   you have an existing Wazuh stack running from a different directory the
+   detected network may be unexpected (e.g. `single-node_default`). The script
+   handles this automatically; if you ever need to override it manually, pass
+   `--core-network <name>` to `app/render_lab.py`, or set `lab.core_network`
+   in your `lab.json`.
+2. **Agent groups didn't exist on the manager before agents tried to enroll.**
+   `up.ps1` now pre-creates every group in your config via
+   `agent_groups -a -g <name>` on the manager before bringing up the overlay,
+   which fixes the `ERROR: Invalid group: <name>. Unable to add agent` you'll
+   see in the agent container logs otherwise.
+
+If you're upgrading from an older version of this repo and have a stale
+overlay running, do a clean restart:
+
+```powershell
+.\scripts\down.ps1 -KeepCore
+.\scripts\up.ps1 -ConfigPath .\config\lab.json
+.\scripts\diagnose.ps1
+```
 
 ### Docker Desktop is not on PATH
 

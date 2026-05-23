@@ -1,0 +1,5 @@
+{
+  "category": "noise",
+  "source": "loghub-linux",
+  "notes": "Patterns drawn from the public LogHub Linux syslog dataset. Realistic background noise — kernel, systemd, NetworkManager, cron."
+}

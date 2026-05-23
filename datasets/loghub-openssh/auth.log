@@ -1,0 +1,94 @@
+sshd[24200]: Invalid user webmaster from 173.234.31.186
+sshd[24200]: input_userauth_request: invalid user webmaster [preauth]
+sshd[24200]: pam_unix(sshd:auth): check pass; user unknown
+sshd[24200]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=173.234.31.186
+sshd[24200]: Failed password for invalid user webmaster from 173.234.31.186 port 38926 ssh2
+sshd[24200]: Connection closed by 173.234.31.186 [preauth]
+sshd[24206]: Did not receive identification string from 212.47.254.145
+sshd[24210]: Invalid user admin from 212.47.254.145
+sshd[24210]: input_userauth_request: invalid user admin [preauth]
+sshd[24210]: pam_unix(sshd:auth): check pass; user unknown
+sshd[24210]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=212.47.254.145
+sshd[24210]: Failed password for invalid user admin from 212.47.254.145 port 39014 ssh2
+sshd[24210]: Connection closed by 212.47.254.145 [preauth]
+sshd[24214]: Invalid user oracle from 218.65.30.61
+sshd[24214]: input_userauth_request: invalid user oracle [preauth]
+sshd[24214]: Failed password for invalid user oracle from 218.65.30.61 port 53281 ssh2
+sshd[24214]: Connection closed by 218.65.30.61 [preauth]
+sshd[24218]: Invalid user postgres from 218.65.30.61
+sshd[24218]: Failed password for invalid user postgres from 218.65.30.61 port 53324 ssh2
+sshd[24222]: Invalid user test from 218.65.30.61
+sshd[24222]: Failed password for invalid user test from 218.65.30.61 port 53371 ssh2
+sshd[24226]: Invalid user user from 218.65.30.61
+sshd[24226]: Failed password for invalid user user from 218.65.30.61 port 53415 ssh2
+sshd[24230]: Failed password for root from 218.65.30.61 port 53462 ssh2
+sshd[24230]: Failed password for root from 218.65.30.61 port 53462 ssh2
+sshd[24230]: Failed password for root from 218.65.30.61 port 53462 ssh2
+sshd[24230]: Disconnecting: Too many authentication failures [preauth]
+sshd[24230]: PAM 5 more authentication failures; logname= uid=0 euid=0 tty=ssh ruser= rhost=218.65.30.61 user=root
+sshd[24230]: PAM service(sshd) ignoring max retries; 6 > 3
+sshd[24234]: Invalid user pi from 103.99.0.122
+sshd[24234]: Failed password for invalid user pi from 103.99.0.122 port 51422 ssh2
+sshd[24238]: Invalid user ubnt from 103.99.0.122
+sshd[24238]: Failed password for invalid user ubnt from 103.99.0.122 port 51470 ssh2
+sshd[24242]: Invalid user support from 103.99.0.122
+sshd[24242]: Failed password for invalid user support from 103.99.0.122 port 51519 ssh2
+sshd[24246]: Invalid user backup from 192.99.4.105
+sshd[24246]: Failed password for invalid user backup from 192.99.4.105 port 33122 ssh2
+sshd[24246]: Connection closed by 192.99.4.105 [preauth]
+sshd[24250]: Invalid user mysql from 192.99.4.105
+sshd[24250]: Failed password for invalid user mysql from 192.99.4.105 port 33170 ssh2
+sshd[24254]: Invalid user git from 192.99.4.105
+sshd[24254]: Failed password for invalid user git from 192.99.4.105 port 33214 ssh2
+sshd[24258]: Invalid user nagios from 192.99.4.105
+sshd[24258]: Failed password for invalid user nagios from 192.99.4.105 port 33258 ssh2
+sshd[24262]: Invalid user www from 192.99.4.105
+sshd[24262]: Failed password for invalid user www from 192.99.4.105 port 33301 ssh2
+sshd[24266]: Invalid user ftp from 192.99.4.105
+sshd[24266]: Failed password for invalid user ftp from 192.99.4.105 port 33345 ssh2
+sshd[24270]: Invalid user redis from 45.32.105.74
+sshd[24270]: Failed password for invalid user redis from 45.32.105.74 port 41008 ssh2
+sshd[24274]: Invalid user elasticsearch from 45.32.105.74
+sshd[24274]: Failed password for invalid user elasticsearch from 45.32.105.74 port 41054 ssh2
+sshd[24278]: Invalid user jenkins from 45.32.105.74
+sshd[24278]: Failed password for invalid user jenkins from 45.32.105.74 port 41099 ssh2
+sshd[24282]: Invalid user gitlab from 45.32.105.74
+sshd[24282]: Failed password for invalid user gitlab from 45.32.105.74 port 41143 ssh2
+sshd[24286]: Invalid user oracle from 45.32.105.74
+sshd[24286]: Failed password for invalid user oracle from 45.32.105.74 port 41187 ssh2
+sshd[24290]: Invalid user devops from 45.32.105.74
+sshd[24290]: Failed password for invalid user devops from 45.32.105.74 port 41231 ssh2
+sshd[24294]: Failed password for root from 51.15.50.40 port 47210 ssh2
+sshd[24294]: Failed password for root from 51.15.50.40 port 47210 ssh2
+sshd[24294]: Failed password for root from 51.15.50.40 port 47210 ssh2
+sshd[24294]: Disconnecting: Too many authentication failures for root [preauth]
+sshd[24298]: reverse mapping checking getaddrinfo for 51-15-50-40.online.net [51.15.50.40] failed - POSSIBLE BREAK-IN ATTEMPT!
+sshd[24302]: Bad protocol version identification 'GET / HTTP/1.0' from 138.197.221.114 port 38112
+sshd[24306]: Bad protocol version identification 'CONNECT www.google.com:443 HTTP/1.1' from 138.197.221.114 port 38158
+sshd[24310]: Bad protocol version identification '\003' from 116.31.116.40 port 22188
+sshd[24314]: Did not receive identification string from 116.31.116.40
+sshd[24318]: Connection reset by 220.130.193.107 port 51112 [preauth]
+sshd[24322]: error: Received disconnect from 220.130.193.107: 14: No more user authentication methods available. [preauth]
+sshd[24326]: Failed password for invalid user nobody from 5.135.65.51 port 49810 ssh2
+sshd[24326]: Received disconnect from 5.135.65.51: 11: Bye Bye [preauth]
+sshd[24330]: Invalid user a from 5.135.65.51
+sshd[24330]: Failed password for invalid user a from 5.135.65.51 port 50031 ssh2
+sshd[24334]: Invalid user ab from 5.135.65.51
+sshd[24334]: Failed password for invalid user ab from 5.135.65.51 port 50067 ssh2
+sshd[24338]: Invalid user abc from 5.135.65.51
+sshd[24338]: Failed password for invalid user abc from 5.135.65.51 port 50112 ssh2
+sshd[24342]: Invalid user abc123 from 5.135.65.51
+sshd[24342]: Failed password for invalid user abc123 from 5.135.65.51 port 50156 ssh2
+sshd[24346]: Invalid user abcd from 5.135.65.51
+sshd[24346]: Failed password for invalid user abcd from 5.135.65.51 port 50199 ssh2
+sshd[24350]: Invalid user account from 5.135.65.51
+sshd[24350]: Failed password for invalid user account from 5.135.65.51 port 50244 ssh2
+sshd[24354]: Accepted publickey for ubuntu from 10.0.4.12 port 51002 ssh2: RSA SHA256:abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx
+sshd[24354]: pam_unix(sshd:session): session opened for user ubuntu by (uid=0)
+sshd[24358]: Received disconnect from 10.0.4.12: 11: disconnected by user
+sshd[24358]: pam_unix(sshd:session): session closed for user ubuntu
+sshd[24362]: Accepted publickey for deploy from 10.0.4.30 port 47214 ssh2: RSA SHA256:1a2b3c4d5e6f7890aabbccddeeff00112233445566778899
+sshd[24362]: pam_unix(sshd:session): session opened for user deploy by (uid=0)
+sshd[24366]: subsystem request for sftp by user deploy
+sshd[24370]: Received disconnect from 10.0.4.30: 11: disconnected by user
+sshd[24370]: pam_unix(sshd:session): session closed for user deploy

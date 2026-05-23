@@ -1,0 +1,25 @@
+suricata[2034]: [1:2027390:3] ET INFO Observed DNS Query for Suspicious .top TLD [Classification: Misc activity] [Priority: 3] {UDP} 10.0.4.22:51234 -> 8.8.8.8:53
+suricata[2034]: [1:2025568:1] ET POLICY Outgoing connection to RFC1918 BroadHost address [Classification: Potential Corporate Privacy Violation] [Priority: 1] {TCP} 10.0.4.22:48211 -> 10.0.0.255:445
+suricata[2034]: [1:2010937:5] ET SCAN Possible Nmap User-Agent Observed [Classification: Web Application Attack] [Priority: 1] {TCP} 91.240.118.172:55432 -> 10.0.4.22:80
+suricata[2034]: [1:2027254:1] ET SCAN Nmap Scripting Engine User-Agent Detected (Nmap NSE) [Classification: Web Application Attack] [Priority: 1] {TCP} 91.240.118.172:55448 -> 10.0.4.22:443
+suricata[2034]: [1:2017701:8] ET WEB_SERVER PHP tags in HTTP POST [Classification: A Network Trojan was detected] [Priority: 1] {TCP} 103.107.180.41:38291 -> 10.0.4.22:80
+suricata[2034]: [1:2034196:2] ET WEB_SERVER Possible CVE-2021-41773 Exploitation Attempt [Classification: Web Application Attack] [Priority: 1] {TCP} 198.98.51.189:42118 -> 10.0.4.22:80
+suricata[2034]: [1:2034195:2] ET WEB_SERVER Possible CVE-2021-42013 Exploitation Attempt [Classification: Web Application Attack] [Priority: 1] {TCP} 198.98.51.189:42124 -> 10.0.4.22:443
+suricata[2034]: [1:2034647:1] ET EXPLOIT Apache Log4j RCE Attempt (jndi: ldap CVE-2021-44228) [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 198.98.51.189:55102 -> 10.0.4.22:8080
+suricata[2034]: [1:2034649:1] ET EXPLOIT Apache Log4j RCE Attempt (jndi: rmi CVE-2021-44228) [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 198.98.51.189:55108 -> 10.0.4.22:8080
+suricata[2034]: [1:2034651:1] ET EXPLOIT Apache Log4j RCE Attempt (jndi: dns CVE-2021-44228) [Classification: Attempted Administrator Privilege Gain] [Priority: 1] {TCP} 198.98.51.189:55114 -> 10.0.4.22:443
+suricata[2034]: [1:2030773:1] ET EXPLOIT Possible Apache Struts2 OGNL Expression Injection (CVE-2017-5638) [Classification: Web Application Attack] [Priority: 1] {TCP} 45.155.205.234:38421 -> 10.0.4.22:8080
+suricata[2034]: [1:2024297:1] ET ATTACK_RESPONSE Output of id Command From HTTP Server [Classification: Successful Administrator Privilege Gain] [Priority: 1] {TCP} 10.0.4.22:80 -> 198.98.51.189:55202
+suricata[2034]: [1:2014297:3] ET POLICY curl User-Agent Outbound [Classification: Attempted User Privilege Gain] [Priority: 2] {TCP} 10.0.4.30:42118 -> 198.98.51.189:80
+suricata[2034]: [1:2025705:3] ET POLICY Possible IP Check api.ipify.org [Classification: Potentially Bad Traffic] [Priority: 2] {TCP} 10.0.4.22:48214 -> 104.26.13.205:443
+suricata[2034]: [1:2024792:1] ET INFO Suspicious User-Agent (python-requests) [Classification: Potentially Bad Traffic] [Priority: 3] {TCP} 45.155.205.234:38445 -> 10.0.4.22:80
+suricata[2034]: [1:2009013:1] ET POLICY Possible Brute Force Attack against SSH [Classification: Attempted Information Leak] [Priority: 2] {TCP} 218.65.30.61:53281 -> 10.0.4.22:22
+suricata[2034]: [1:2006380:11] ET P2P BitTorrent Peer Sync [Classification: Potential Corporate Privacy Violation] [Priority: 1] {TCP} 10.0.4.50:56123 -> 185.220.101.34:6881
+suricata[2034]: [1:2402000:7019] ET DROP Dshield Block Listed Source group 1 [Classification: Misc Attack] [Priority: 2] {TCP} 51.15.50.40:47210 -> 10.0.4.22:22
+suricata[2034]: [1:2025690:1] ET HUNTING Suspicious Empty TCP SYN Probe Inbound [Classification: Misc activity] [Priority: 3] {TCP} 91.240.118.172:0 -> 10.0.4.22:443
+suricata[2034]: [1:2018959:5] ET SCAN Behavioral Unusually fast Terminal Server Traffic, Potential Scan or Infection [Classification: Misc activity] [Priority: 2] {TCP} 91.240.118.172:55501 -> 10.0.4.22:3389
+suricata[2034]: [1:2024903:1] ET INFO Observed DNS Query for .onion TLD via TOR2WEB [Classification: Misc activity] [Priority: 3] {UDP} 10.0.4.50:51298 -> 8.8.8.8:53
+suricata[2034]: [1:2027865:6] ET ATTACK_RESPONSE Possible Shell Command Execution [Classification: Web Application Attack] [Priority: 1] {TCP} 10.0.4.22:80 -> 198.98.51.189:55301
+suricata[2034]: [1:2030506:1] ET TROJAN [PTsecurity] CobaltStrike Beacon Encoded Profile [Classification: Network Trojan was detected] [Priority: 1] {TCP} 10.0.4.30:48211 -> 198.98.51.189:443
+suricata[2034]: [1:2018316:5] ET MALWARE Cryptocurrency Miner Checkin [Classification: A Network Trojan was detected] [Priority: 1] {TCP} 10.0.4.22:48312 -> 198.98.51.189:14444
+suricata[2034]: [1:2027244:1] ET HUNTING Generic .top URL with minimal headers [Classification: Misc activity] [Priority: 3] {TCP} 10.0.4.22:48414 -> 198.98.51.189:80

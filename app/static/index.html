@@ -230,7 +230,9 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
   <div class="stat-pill"><strong id="totalEvts">0</strong> events</div>
   <div class="stat-pill"><strong id="evtPerMin">0</strong> /min</div>
   <div class="stat-pill"><strong id="epCount">0</strong> endpoints</div>
+  <div class="stat-pill" id="datasetPill" title="Real-world log lines available for dataset_replay">&#x1F4DA; <strong id="datasetLines">0</strong> dataset lines</div>
   <div class="spacer"></div>
+  <a class="btn btn-ghost" href="https://localhost" target="_blank" rel="noreferrer noopener" title="Open the Wazuh dashboard in a new tab">&#x1F50E; Wazuh Dashboard &#x2197;</a>
   <button class="btn btn-green" onclick="globalAction('resume')">&#x25B6; Resume All</button>
   <button class="btn btn-red"   onclick="globalAction('pause')">&#x23F8; Pause All</button>
   <button id="stormBtn" class="btn btn-storm" onclick="toggleStorm()">&#x26A1; STORM</button>
@@ -371,6 +373,14 @@ function applyStatus() {
   document.getElementById('totalEvts').textContent = total_events.toLocaleString();
   document.getElementById('evtPerMin').textContent = events_last_minute.toLocaleString();
   document.getElementById('epCount').textContent   = endpoint_count;
+  const dsLines = (S.status.dataset_lines_total ?? 0);
+  document.getElementById('datasetLines').textContent = dsLines.toLocaleString();
+  const dsPill = document.getElementById('datasetPill');
+  dsPill.style.display = dsLines > 0 ? '' : 'none';
+  if (dsLines > 0 && S.status.datasets) {
+    dsPill.title = 'Real-world replay sources:\n' +
+      S.status.datasets.map(d => `  ${d.name} (${d.category}): ${d.line_count} lines`).join('\n');
+  }
 
   const stormBtn = document.getElementById('stormBtn');
   stormBtn.classList.toggle('active', storm_mode);

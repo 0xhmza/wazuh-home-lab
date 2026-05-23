@@ -1,0 +1,61 @@
+kernel: [   0.000000] Linux version 5.15.0-91-generic (buildd@lcy02-amd64-046) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38)
+kernel: [   0.014218] ACPI: Local APIC address 0xfee00000
+kernel: [   0.812412] tsc: Refined TSC clocksource calibration: 2294.700 MHz
+kernel: [   1.234118] EXT4-fs (vda1): mounted filesystem with ordered data mode. Quota mode: none.
+kernel: [   2.984114] systemd[1]: systemd 249.11-0ubuntu3.12 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK +XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified)
+kernel: [   3.218714] systemd[1]: Set hostname to <web-prod-01>.
+kernel: [   3.881114] systemd[1]: Started Daily apt download activities.
+systemd[1]: Reloading.
+systemd[1]: /lib/systemd/system/dbus.socket:5: ListenStream= references a path below legacy directory /var/run/, updating /var/run/dbus/system_bus_socket -> /run/dbus/system_bus_socket; please update the unit file accordingly.
+systemd[1]: Started Daily apt download activities.
+systemd[1]: apt-daily.service: Deactivated successfully.
+systemd[1]: Finished Daily apt download activities.
+systemd[1]: Started Session 1234 of user ubuntu.
+systemd[1]: Created slice User Slice of UID 1000.
+systemd[1]: Started User Manager for UID 1000.
+systemd[1]: Stopping User Manager for UID 1000...
+systemd[1]: Removed slice User Slice of UID 1000.
+systemd-logind[825]: New session 1234 of user ubuntu.
+systemd-logind[825]: Removed session 1234.
+systemd-resolved[805]: Positive Trust Anchors:
+systemd-resolved[805]: Negative trust anchors: home.arpa 10.in-addr.arpa 16.172.in-addr.arpa
+systemd-resolved[805]: Using system hostname 'web-prod-01'.
+systemd-timesyncd[401]: Initial clock synchronization to time.cloudflare.com:123
+systemd-timesyncd[401]: Contacted time server 162.159.200.1:123 (time.cloudflare.com).
+NetworkManager[812]: <info>  [1701360001.1234] device (eth0): state change: ip-config -> ip-check (reason 'none', sys-iface-state: 'managed')
+NetworkManager[812]: <info>  [1701360001.2345] device (eth0): state change: ip-check -> secondaries (reason 'none', sys-iface-state: 'managed')
+NetworkManager[812]: <info>  [1701360001.3456] device (eth0): state change: secondaries -> activated (reason 'none', sys-iface-state: 'managed')
+NetworkManager[812]: <info>  [1701360001.4567] manager: NetworkManager state is now CONNECTED_GLOBAL
+NetworkManager[812]: <info>  [1701360001.5678] device (eth0): Activation: successful, device activated.
+CRON[7112]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+CRON[7112]: (root) CMD (/usr/local/bin/healthcheck.sh)
+CRON[7112]: pam_unix(cron:session): session closed for user root
+CRON[7234]: (root) CMD (   cd / && run-parts --report /etc/cron.hourly)
+CRON[7456]: (root) CMD ([ -x /usr/lib/php/sessionclean ] && if [ ! -d /run/systemd/system ]; then /usr/lib/php/sessionclean; fi)
+CRON[8234]: (ubuntu) CMD (/home/ubuntu/.local/bin/sync-data --quiet)
+dockerd[1254]: time="2024-01-15T03:14:22.123456789Z" level=info msg="health check passed for container training-nginx"
+dockerd[1254]: time="2024-01-15T03:14:22.234567890Z" level=info msg="ignoring event" container=cb5e6f7a8b9c0d1e2f3a4b5c6d7e8f9 module=libcontainerd namespace=moby topic=/tasks/oom-events
+dockerd[1254]: time="2024-01-15T03:14:23.345678901Z" level=warning msg="Health check for container abc123 error: Health check exceeded timeout (3s)"
+dockerd[1254]: time="2024-01-15T03:14:23.456789012Z" level=info msg="Container e94de3 failed to exit within 10 seconds of signal 15 - using the force"
+snapd[1067]: api.go:957: GET /v2/snaps?select=enabled 200 0.123ms
+snapd[1067]: handlers.go:560: Reported install problem for "lxd" as "Snap auto-refresh"
+snapd[1067]: storehelpers.go:719: cannot refresh: snap has no updates available: "core22", "lxd", "snapd"
+unattended-upgrades[12345]: Starting unattended upgrades script
+unattended-upgrades[12345]: Allowed origins are: origin=Ubuntu,suite=jammy-security
+unattended-upgrades[12345]: No packages found that can be upgraded unattended and no pending auto-removals
+rsyslogd: action 'action-0-builtin:omfwd' suspended (module 'builtin:omfwd'), retry 0
+rsyslogd: action 'action-0-builtin:omfwd' resumed (module 'builtin:omfwd')
+audispd: queue is full - dropping event
+audispd: queue is full - dropping event
+sudo:    ubuntu : TTY=pts/0 ; PWD=/home/ubuntu ; USER=root ; COMMAND=/usr/bin/apt-get update
+sudo:    ubuntu : TTY=pts/0 ; PWD=/home/ubuntu ; USER=root ; COMMAND=/usr/bin/systemctl status nginx
+sudo: pam_unix(sudo:session): session opened for user root(uid=0) by ubuntu(uid=1000)
+sudo: pam_unix(sudo:session): session closed for user root
+postfix/master[1432]: daemon started -- version 3.6.4, configuration /etc/postfix
+postfix/qmgr[1456]: A1B2C3D4E5: from=<noreply@example.local>, size=1234, nrcpt=1 (queue active)
+postfix/smtp[1567]: A1B2C3D4E5: to=<admin@example.local>, relay=mail.example.local[10.0.0.5]:25, delay=0.21, delays=0.04/0.01/0.07/0.09, dsn=2.0.0, status=sent
+chronyd[789]: Selected source 162.159.200.1 (time.cloudflare.com)
+chronyd[789]: System clock TAI offset set to 37 seconds
+dbus-daemon[823]: [system] Successfully activated service 'org.freedesktop.PolicyKit1'
+dbus-daemon[823]: [system] Activating via systemd: service name='org.freedesktop.timedate1' unit='dbus-org.freedesktop.timedate1.service'
+polkitd(authority=local): Registered Authentication Agent for unix-process:1234:5678 (system bus name :1.567 [/usr/bin/pkttyagent --notify-fd 5 --fallback], object path /org/freedesktop/PolicyKit1/AuthenticationAgent, locale en_US.UTF-8)

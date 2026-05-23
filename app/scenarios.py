@@ -44,6 +44,7 @@ SCENARIO_META: dict[str, dict] = {
     "large_outbound_transfer":{"label": "Large Outbound Transfer",  "category": "exfil",     "severity": "high"},
     "iptables_modified":      {"label": "Firewall Rule Changed",    "category": "impact",    "severity": "critical"},
     "process_injection_attempt":{"label":"Process Injection",       "category": "impact",    "severity": "critical"},
+    "dataset_replay":         {"label": "Real-World Replay",        "category": "noise",     "severity": "info"},
     "generic_syslog_noise":   {"label": "Background Noise",         "category": "noise",     "severity": "info"},
 }
 
@@ -490,6 +491,19 @@ def process_injection_attempt(endpoint: dict, rng: random.Random, now: datetime)
     )
 
 
+def dataset_replay(endpoint: dict, rng: random.Random, now: datetime) -> str:
+    """Replay a line from the bundled or fetched real-world dataset.
+
+    Falls back to generic syslog noise when no datasets are available, so
+    profiles can include this scenario unconditionally.
+    """
+    lines = endpoint.get("_dataset_lines") or []
+    if not lines:
+        return generic_syslog_noise(endpoint, rng, now)
+    body = rng.choice(lines)
+    return f"{prefix(now, endpoint['name'], 'replay')} {body}"
+
+
 # ── registry ──────────────────────────────────────────────────────────────────
 
 SCENARIOS = {
@@ -497,6 +511,7 @@ SCENARIOS = {
     "apache_500":               apache_500,
     "cron_persistence":         cron_persistence,
     "cron_session":             cron_session,
+    "dataset_replay":           dataset_replay,
     "generic_syslog_noise":     generic_syslog_noise,
     "iptables_modified":        iptables_modified,
     "kernel_usb_event":         kernel_usb_event,

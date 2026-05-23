@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Locally fetched datasets (HuggingFace, etc.) — bundled samples are kept.
+datasets/hf-*/
+
