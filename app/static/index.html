@@ -232,7 +232,7 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
   <div class="stat-pill"><strong id="epCount">0</strong> endpoints</div>
   <div class="stat-pill" id="datasetPill" title="Real-world log lines available for dataset_replay">&#x1F4DA; <strong id="datasetLines">0</strong> dataset lines</div>
   <div class="spacer"></div>
-  <a class="btn btn-ghost" href="https://localhost" target="_blank" rel="noreferrer noopener" title="Open the Wazuh dashboard in a new tab">&#x1F50E; Wazuh Dashboard &#x2197;</a>
+  <a id="dashboardLink" class="btn btn-ghost" href="https://localhost" target="_blank" rel="noreferrer noopener" title="Open the Wazuh dashboard in a new tab">&#x1F50E; Wazuh Dashboard &#x2197;</a>
   <button class="btn btn-green" onclick="globalAction('resume')">&#x25B6; Resume All</button>
   <button class="btn btn-red"   onclick="globalAction('pause')">&#x23F8; Pause All</button>
   <button id="stormBtn" class="btn btn-storm" onclick="toggleStorm()">&#x26A1; STORM</button>
@@ -384,6 +384,14 @@ function applyStatus() {
 
   const stormBtn = document.getElementById('stormBtn');
   stormBtn.classList.toggle('active', storm_mode);
+
+  // Dashboard URL is picked at launch time (random port >= 10000) — keep the
+  // header link in sync so users land on the right page.
+  const link = document.getElementById('dashboardLink');
+  if (link && S.status.dashboard_url && link.href !== S.status.dashboard_url) {
+    link.href = S.status.dashboard_url;
+    link.title = `Open the Wazuh dashboard in a new tab (${S.status.dashboard_url})`;
+  }
 
   // Storm mode — pulse header
   document.querySelector('header').style.borderBottomColor = storm_mode ? 'var(--red)' : 'var(--border)';

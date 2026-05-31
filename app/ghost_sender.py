@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import secrets
 import socket
 import ssl
 import struct
 import threading
 import time
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 try:
@@ -40,10 +41,8 @@ log = logging.getLogger("ghost-sender")
 # Fixed AES-CBC IV used by the Wazuh agent wire protocol.
 _AES_IV = b"FEDCBA0987654321"
 
-# Inner-message counter fields (static values match the reference simulator).
-_RAND_NUM = b"55555"
-_GLOBAL_CTR = b"1234567891"
-_LOCAL_CTR = b"5555"
+# Wazuh's local counter wraps at 9999 (matches src/os_crypto/shared/msgs.c).
+_LOCAL_CTR_MAX = 9999
 
 
 @dataclass
@@ -52,6 +51,12 @@ class _AgentCreds:
     name: str
     key: str
     enc_key: bytes  # 47 bytes; first 32 used as AES-256 key
+    # Per-agent monotonic counters. Wazuh's anti-replay logic rejects any
+    # message whose <global, local> is not strictly greater than the last
+    # accepted one, so a fixed counter only ever lets the first event through.
+    global_counter: int = 0
+    local_counter: int = 0
+    counter_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 class GhostSender:
@@ -65,6 +70,14 @@ class GhostSender:
     POLL_INTERVAL = 0.3     # seconds between event-log polls
     REG_RETRIES = 5         # registration attempts before giving up on an endpoint
     REG_RETRY_DELAY = 4.0   # seconds between registration retries
+    KEEPALIVE_INTERVAL = 30.0  # seconds between control keep-alive messages
+
+    # The "location" field the manager sees for every forwarded event. Mirrors
+    # the path a real wazuh-agent container would report when tailing
+    # /training-data/logs/training.log via a <localfile> stanza, so the syslog
+    # pre-decoder treats it like a normal log file and SSH / Apache / etc.
+    # decoders fire as expected.
+    LOG_LOCATION = "/training-data/logs/training.log"
 
     def __init__(
         self,
@@ -89,49 +102,61 @@ class GhostSender:
 
         self._creds: dict[str, _AgentCreds] = {}
         self._threads: list[threading.Thread] = []
+        self._registrar: threading.Thread | None = None
+        self._lock = threading.Lock()
         self._running = False
 
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self) -> None:
+        """Kick off registration + sending in a background thread.
+
+        Registration is slow (TLS handshake + retries against a manager that
+        may still be booting), so it MUST NOT block the FastAPI lifespan —
+        otherwise the generator's web UI never finishes coming up.
+        """
         self._running = True
         log.info(
-            "Ghost-sender: registering %d phantom agents with %s:%d …",
+            "Ghost-sender: scheduling registration of %d phantom agents with %s:%d …",
             len(self._endpoints),
             self._manager_address,
             self._reg_port,
         )
+        self._registrar = threading.Thread(
+            target=self._register_and_launch_all,
+            daemon=True,
+            name="ghost-registrar",
+        )
+        self._registrar.start()
 
+    def _register_and_launch_all(self) -> None:
         for ep in self._endpoints:
+            if not self._running:
+                return
             name = ep["name"]
             groups: list[str] = ep.get("groups", [])
             creds = self._register_with_retry(name, groups)
-            if creds is not None:
-                self._creds[name] = creds
-                log.info("Ghost agent registered: '%s' (id=%s)", name, creds.agent_id)
-            else:
+            if creds is None:
                 log.warning(
-                    "Ghost agent '%s' could not be registered — "
-                    "it will be skipped for this run.",
+                    "Ghost agent '%s' could not be registered — skipped for this run.",
                     name,
                 )
-
-        for ep in self._endpoints:
-            name = ep["name"]
-            if name not in self._creds:
                 continue
+            with self._lock:
+                self._creds[name] = creds
+            log.info("Ghost agent registered: '%s' (id=%s)", name, creds.agent_id)
             t = threading.Thread(
                 target=self._sender_loop,
                 args=(name,),
                 daemon=True,
                 name=f"ghost-{name}",
             )
-            self._threads.append(t)
+            with self._lock:
+                self._threads.append(t)
             t.start()
-
         log.info(
-            "Ghost-sender active: %d/%d phantom agents sending events.",
-            len(self._threads),
+            "Ghost-sender: registration pass complete — %d/%d agents active.",
+            len(self._creds),
             len(self._endpoints),
         )
 
@@ -207,6 +232,8 @@ class GhostSender:
         # Start cursor at 0 so we pick up events generated during registration.
         cursor = 0
         sock: socket.socket | None = None
+        startup_sent = False
+        last_keepalive = 0.0
 
         while self._running:
             # Ensure we have an active connection.
@@ -215,23 +242,40 @@ class GhostSender:
                 if sock is None:
                     time.sleep(self.RECONNECT_DELAY)
                     continue
+                # New socket → re-greet the manager.
+                startup_sent = False
 
-            # Drain new events for this endpoint from the engine's event log.
             try:
+                # Send the startup control message so the manager flips this
+                # agent to "active" in agent-management views. Control messages
+                # use the '#!-' prefix; the queue byte is omitted.
+                if not startup_sent:
+                    self._send_payload(sock, _build_payload(creds, b"#!-agent startup "))
+                    startup_sent = True
+                    last_keepalive = time.monotonic()
+
+                # Periodic keep-alive so the agent stays "active".
+                if time.monotonic() - last_keepalive >= self.KEEPALIVE_INTERVAL:
+                    self._send_payload(sock, _build_payload(creds, b"#!-agent keep alive"))
+                    last_keepalive = time.monotonic()
+
+                # Drain new events for this endpoint from the engine's event log.
                 events, cursor = self._engine.events_since(cursor, self._FETCH_LIMIT)
                 for ev in events:
                     if ev["endpoint"] != endpoint_name:
                         continue
-                    location = "1:logcollector:/training-data/logs/training.log"
-                    payload = _build_payload(creds, f"{location}:{ev['message']}")
-                    if self._protocol == "udp":
-                        sock.sendto(payload, (self._manager_address, self._manager_port))
-                    else:
-                        sock.settimeout(10)
-                        sock.sendall(struct.pack("<I", len(payload)) + payload)
+                    # Wazuh wire format for log lines: '1:<location>:<message>'.
+                    # '1' is LOCALFILE_MQ; <location> is the file path the
+                    # syslog decoder uses for source matching.
+                    inner = (
+                        f"1:{self.LOG_LOCATION}:{ev['message']}".encode(
+                            "utf-8", errors="replace"
+                        )
+                    )
+                    self._send_payload(sock, _build_payload(creds, inner))
             except OSError as exc:
                 log.warning(
-                    "Ghost '%s': send error (%s) — reconnecting …",
+                    "Ghost '%s': send error (%s) - reconnecting ...",
                     endpoint_name, exc,
                 )
                 _close(sock)
@@ -244,6 +288,13 @@ class GhostSender:
 
         _close(sock)
 
+    def _send_payload(self, sock: socket.socket, payload: bytes) -> None:
+        if self._protocol == "udp":
+            sock.sendto(payload, (self._manager_address, self._manager_port))
+        else:
+            sock.settimeout(10)
+            sock.sendall(struct.pack("<I", len(payload)) + payload)
+
     def _connect(self, name: str, creds: _AgentCreds) -> socket.socket | None:
         try:
             if self._protocol == "udp":
@@ -252,14 +303,6 @@ class GhostSender:
                 sock = socket.create_connection(
                     (self._manager_address, self._manager_port), timeout=10
                 )
-                # Announce startup to the manager.
-                startup = _build_payload(
-                    creds,
-                    f"1:logcollector:/training-data/logs/training.log:"
-                    f"Wazuh ghost agent '{name}' connected",
-                )
-                sock.settimeout(10)
-                sock.sendall(struct.pack("<I", len(startup)) + startup)
             return sock
         except OSError as exc:
             log.warning(
@@ -295,10 +338,26 @@ def _derive_enc_key(agent_id: str, name: str, key: str) -> bytes:
     return sum2 + sum1
 
 
-def _build_payload(creds: _AgentCreds, message: str) -> bytes:
-    """Encrypt and frame a single event for the Wazuh manager wire protocol."""
-    # 1. Compose the inner event (Wazuh agent wire format).
-    raw = _RAND_NUM + _GLOBAL_CTR + b":" + _LOCAL_CTR + b":" + message.encode("utf-8", errors="replace")
+def _build_payload(creds: _AgentCreds, message: bytes) -> bytes:
+    """Encrypt and frame a single event for the Wazuh manager wire protocol.
+
+    Wire layout (after AES-CBC decryption, padding stripped):
+        <md5 hex 32B><rand 5B><global 10B>':'<local 4B>':'<message>
+
+    Wazuh's manager checks the MD5, then enforces anti-replay on the
+    <global, local> counters per agent — so they MUST increase across
+    successive messages from the same agent.
+    """
+    with creds.counter_lock:
+        creds.global_counter += 1
+        creds.local_counter += 1
+        if creds.local_counter > _LOCAL_CTR_MAX:
+            creds.local_counter = 1
+        gctr = creds.global_counter
+        lctr = creds.local_counter
+
+    rand_num = secrets.randbelow(100000)
+    raw = f"{rand_num:05d}{gctr:010d}:{lctr:04d}:".encode("ascii") + message
     event = hashlib.md5(raw).hexdigest().encode() + raw
 
     # 2. Compress.

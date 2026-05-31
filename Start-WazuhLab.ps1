@@ -34,6 +34,9 @@ if ((Test-Path $_ddBin) -and ($env:PATH -notlike "*$_ddBin*")) {
     $env:PATH = "$_ddBin;$env:PATH"
 }
 
+# Pull in shared helpers (port allocator, override writer, python launcher).
+. (Join-Path $RepoRoot "scripts\common.ps1")
+
 # ── State ─────────────────────────────────────────────────────────────────────
 $Script:Passes = 0
 $Script:Warns  = 0
@@ -124,7 +127,7 @@ function Get-PythonVersion {
             if ($raw -match "Python (\d+\.\d+)") { return $Matches[1] }
         } catch {}
     }
-    # python / python3 on PATH — skip Windows Store stubs (they are tiny placeholder EXEs)
+    # python / python3 on PATH - skip Windows Store stubs (they are tiny placeholder EXEs)
     foreach ($cmd in @("python", "python3")) {
         $c = Get-Command $cmd -ErrorAction SilentlyContinue
         if ($c) {
@@ -144,7 +147,7 @@ function Get-PythonVersion {
 Write-Banner
 # ──────────────────────────────────────────────────────────────────────────────
 
-# ═══ SECTION 1 — System ═══════════════════════════════════════════════════════
+# ═══ SECTION 1 - System ═══════════════════════════════════════════════════════
 Write-Section "System"
 
 # OS version
@@ -154,10 +157,10 @@ try {
     if ($osBuild -ge 19041) {
         Write-Check "Operating system" PASS "$osCaption (build $osBuild)"
     } elseif ($osBuild -ge 17763) {
-        Write-Check "Operating system" WARN "$osCaption (build $osBuild) — WSL 2 requires 19041+" `
+        Write-Check "Operating system" WARN "$osCaption (build $osBuild) - WSL 2 requires 19041+" `
             -Fix "Update Windows to version 20H1 or later via Windows Update."
     } else {
-        Write-Check "Operating system" FAIL "$osCaption (build $osBuild) — minimum is build 19041" `
+        Write-Check "Operating system" FAIL "$osCaption (build $osBuild) - minimum is build 19041" `
             -Fix "Update Windows 10 to version 20H1 (build 19041) or later."
     }
 } catch {
@@ -186,7 +189,7 @@ try {
     } elseif ($totalRam -ge 12GB) {
         Write-Check "System RAM" WARN "$ramLabel installed (16 GB+ recommended for comfort)"
     } else {
-        Write-Check "System RAM" FAIL "$ramLabel installed — Docker needs 10 GB; 16 GB total recommended" `
+        Write-Check "System RAM" FAIL "$ramLabel installed - Docker needs 10 GB; 16 GB total recommended" `
             -Fix "Add more RAM, or reduce agent count in the config to lower memory pressure."
     }
 } catch {
@@ -205,7 +208,7 @@ try {
         Write-Check "Free disk space" WARN "$freeLabel free on $drive (60 GB+ recommended)" `
             -Fix "Docker images and agent logs can consume up to 60 GB. Free more space before a full run."
     } else {
-        Write-Check "Free disk space" FAIL "$freeLabel free on $drive — 60 GB minimum recommended" `
+        Write-Check "Free disk space" FAIL "$freeLabel free on $drive - 60 GB minimum recommended" `
             -Fix "Free at least 60 GB on drive $drive before starting."
     }
 } catch {
@@ -226,10 +229,10 @@ try {
             -Fix "Enable VT-x (Intel) or AMD-V (AMD) in your BIOS / UEFI settings."
     }
 } catch {
-    Write-Check "Hardware virtualization" WARN "Could not verify — confirm VT-x/AMD-V is on in BIOS"
+    Write-Check "Hardware virtualization" WARN "Could not verify - confirm VT-x/AMD-V is on in BIOS"
 }
 
-# ═══ SECTION 2 — WSL 2 ════════════════════════════════════════════════════════
+# ═══ SECTION 2 - WSL 2 ════════════════════════════════════════════════════════
 Write-Section "WSL 2"
 
 $wslAvailable = $false
@@ -255,13 +258,13 @@ if ($wslAvailable) {
             Write-Check "WSL 2 default version" WARN "Default is WSL 1" `
                 -Fix "Run: wsl --set-default-version 2"
         } else {
-            Write-Check "WSL 2 default version" INFO "Cannot determine — run: wsl --set-default-version 2"
+            Write-Check "WSL 2 default version" INFO "Cannot determine - run: wsl --set-default-version 2"
         }
     } catch {
         Write-Check "WSL 2 default version" INFO "wsl --status unavailable on this build"
     }
 
-    # Working default distro (simple echo test — avoids UTF-16 parse issues)
+    # Working default distro (simple echo test - avoids UTF-16 parse issues)
     try {
         $wslEcho = (wsl echo wsl_ok 2>&1) | Out-String
         if ($wslEcho -match "wsl_ok") {
@@ -285,23 +288,23 @@ if ($wslAvailable) {
                 if ($mapCount -ge 262144) {
                     Write-Check "vm.max_map_count" PASS "$mapCount"
                 } else {
-                    Write-Check "vm.max_map_count" FAIL "$mapCount — Wazuh indexer requires >= 262144" `
+                    Write-Check "vm.max_map_count" FAIL "$mapCount - Wazuh indexer requires >= 262144" `
                         -Fix "In WSL: sudo sysctl -w vm.max_map_count=262144  |  To persist: echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf"
                 }
             } else {
-                Write-Check "vm.max_map_count" WARN "Could not read value — set it manually in WSL" `
+                Write-Check "vm.max_map_count" WARN "Could not read value - set it manually in WSL" `
                     -Fix "In WSL: sudo sysctl -w vm.max_map_count=262144"
             }
         } catch {
-            Write-Check "vm.max_map_count" WARN "Check failed — set manually in WSL" `
+            Write-Check "vm.max_map_count" WARN "Check failed - set manually in WSL" `
                 -Fix "In WSL: sudo sysctl -w vm.max_map_count=262144"
         }
     } else {
-        Write-Check "vm.max_map_count" SKIP "Skipped — no WSL distro available"
+        Write-Check "vm.max_map_count" SKIP "Skipped - no WSL distro available"
     }
 }
 
-# ═══ SECTION 3 — Docker ═══════════════════════════════════════════════════════
+# ═══ SECTION 3 - Docker ═══════════════════════════════════════════════════════
 Write-Section "Docker"
 
 $dockerCliOk  = $false
@@ -360,7 +363,7 @@ if ($dockerCmd) {
     }
 } else {
     Write-Check "Docker CLI" FAIL "docker not found on PATH" `
-        -Fix "Install Docker Desktop — it registers the CLI in PATH automatically."
+        -Fix "Install Docker Desktop - it registers the CLI in PATH automatically."
 }
 
 # Docker daemon running?
@@ -392,7 +395,7 @@ if ($dockerDaemon -and $dockerInfo) {
         if ($osType -eq "linux") {
             Write-Check "Linux containers mode" PASS "Linux"
         } else {
-            Write-Check "Linux containers mode" FAIL "Mode is '$osType' — must be Linux" `
+            Write-Check "Linux containers mode" FAIL "Mode is '$osType' - must be Linux" `
                 -Fix "Right-click the Docker Desktop tray icon → 'Switch to Linux containers...'"
         }
     } catch {
@@ -440,7 +443,7 @@ if ($dockerDaemon -and $dockerInfo) {
     Write-Check "Docker memory allocation" SKIP "Skipped (daemon not running)"
 }
 
-# ═══ SECTION 4 — Required Tools ═══════════════════════════════════════════════
+# ═══ SECTION 4 - Required Tools ═══════════════════════════════════════════════
 Write-Section "Required Tools"
 
 # Git
@@ -467,7 +470,7 @@ if ($pyVer) {
     if ($maj -gt 3 -or ($maj -eq 3 -and $min -ge 11)) {
         Write-Check "Python 3.11+" PASS "v$pyVer"
     } else {
-        Write-Check "Python 3.11+" FAIL "v$pyVer detected — 3.11+ required" `
+        Write-Check "Python 3.11+" FAIL "v$pyVer detected - 3.11+ required" `
             -Fix "Install Python 3.11+ from https://www.python.org/downloads/windows/  (check 'Add to PATH')"
     }
 } else {
@@ -475,7 +478,7 @@ if ($pyVer) {
         -Fix "Install Python 3.11+ from https://www.python.org/downloads/windows/  (check 'Add to PATH')"
 }
 
-# ═══ SECTION 5 — Lab Configuration ═══════════════════════════════════════════
+# ═══ SECTION 5 - Lab Configuration ═══════════════════════════════════════════
 Write-Section "Lab Configuration"
 
 # Config file resolution
@@ -513,32 +516,44 @@ if ($resolvedConfigPath -and (Test-Path $resolvedConfigPath)) {
     } catch {}
 }
 
+# Pick / reuse a random non-privileged port (>= 10000) for the Wazuh dashboard.
+# Persisted to generated/dashboard-port.txt so the URL is stable across restarts.
+try {
+    $dashboardPort = Get-WazuhDashboardPort -RepoRoot $RepoRoot
+    Write-Check "Dashboard port" PASS "https://localhost:$dashboardPort (auto-assigned, >=10000)"
+} catch {
+    $dashboardPort = 0
+    Write-Check "Dashboard port" FAIL "Could not allocate" -Fix $_.Exception.Message
+}
+
 # Port availability
 $portChecks = @(
-    @{ Port = 443;     Label = "Port 443  (dashboard HTTPS)"    }
     @{ Port = 9200;    Label = "Port 9200 (Wazuh indexer API)"  }
     @{ Port = 1514;    Label = "Port 1514 (agent events)"       }
     @{ Port = 1515;    Label = "Port 1515 (agent enrollment)"   }
     @{ Port = 55000;   Label = "Port 55000 (Wazuh REST API)"    }
     @{ Port = $uiPort; Label = "Port $uiPort (generator UI)"    }
 )
+if ($dashboardPort -gt 0) {
+    $portChecks += @{ Port = $dashboardPort; Label = "Port $dashboardPort (dashboard HTTPS)" }
+}
 foreach ($p in $portChecks) {
     if (Test-PortFree $p.Port) {
         Write-Check $p.Label PASS "Free"
     } else {
-        Write-Check $p.Label WARN "In use — may conflict" `
+        Write-Check $p.Label WARN "In use - may conflict" `
             -Fix "Find and stop the process using port $($p.Port), or this may already be a running lab instance."
     }
 }
 
-# ═══ SECTION 6 — Previous Run State ══════════════════════════════════════════
+# ═══ SECTION 6 - Previous Run State ══════════════════════════════════════════
 Write-Section "Previous Run State"
 
 $vendorPath = Join-Path $RepoRoot "vendor\wazuh-docker"
 if (Test-Path $vendorPath) {
-    Write-Check "wazuh-docker vendor" INFO "Already cloned — setup-core will update to configured tag"
+    Write-Check "wazuh-docker vendor" INFO "Already cloned - setup-core will update to configured tag"
 } else {
-    Write-Check "wazuh-docker vendor" INFO "Not cloned yet — will be cloned on first run"
+    Write-Check "wazuh-docker vendor" INFO "Not cloned yet - will be cloned on first run"
 }
 
 $certMarker = Join-Path $RepoRoot "vendor\wazuh-docker\single-node\config\wazuh_indexer_ssl_certs\wazuh.manager.pem"
@@ -583,7 +598,7 @@ if ($Script:Fails -gt 0) {
 
 if ($CheckOnly) {
     if ($Script:Warns -gt 0) {
-        Write-Host "  Prerequisite check complete — review warnings above." -ForegroundColor Yellow
+        Write-Host "  Prerequisite check complete - review warnings above." -ForegroundColor Yellow
     } else {
         Write-Host "  All prerequisites satisfied." -ForegroundColor Green
     }
@@ -605,13 +620,13 @@ if ($Script:Warns -gt 0) {
 
 Write-Host "  How should synthetic endpoints connect to Wazuh?" -ForegroundColor White
 Write-Host ""
-Write-Host "    [1]  Ghost mode       — one lightweight Python process, no extra Docker containers" -ForegroundColor Cyan
+Write-Host "    [1]  Ghost mode       - one lightweight Python process, no extra Docker containers" -ForegroundColor Cyan
 Write-Host "         (recommended for most machines: fast, low memory)" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "    [2]  Container mode   — one wazuh-agent Docker container per endpoint" -ForegroundColor White
+Write-Host "    [2]  Container mode   - one wazuh-agent Docker container per endpoint" -ForegroundColor White
 Write-Host "         (original behaviour: more realistic, higher resource usage)" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "    [3]  Skip             — exit without starting" -ForegroundColor DarkGray
+Write-Host "    [3]  Skip             - exit without starting" -ForegroundColor DarkGray
 Write-Host ""
 
 $modeChoice = ""
@@ -635,7 +650,7 @@ if ($modeChoice -eq "3") {
     $modeLabel  = if ($modeChoice -eq "1") { "Ghost mode (lightweight)" } else { "Container mode (full)" }
 
     Write-Host ""
-    Write-Host "  Starting Wazuh lab in $modeLabel — this may take a few minutes on first run..." -ForegroundColor Cyan
+    Write-Host "  Starting Wazuh lab in $modeLabel - this may take a few minutes on first run..." -ForegroundColor Cyan
     Write-Host ""
 
     try {
@@ -649,14 +664,146 @@ if ($modeChoice -eq "3") {
 
     Write-Host ""
     Write-Host ("  " + [string]([char]0x2550) * 58) -ForegroundColor DarkGray
-    Write-Host "  Dashboard : https://localhost" -ForegroundColor Green
+    if ($dashboardPort -gt 0) {
+        Write-Host "  Dashboard : https://localhost:$dashboardPort" -ForegroundColor Green
+    } else {
+        Write-Host "  Dashboard : https://localhost  (port allocation failed - check generated/dashboard-port.txt)" -ForegroundColor Yellow
+    }
     Write-Host "  Username  : admin" -ForegroundColor Green
     Write-Host "  Password  : SecretPassword" -ForegroundColor Green
     Write-Host "  Generator : http://localhost:$uiPort" -ForegroundColor Green
     Write-Host ("  " + [string]([char]0x2550) * 58) -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Agents enroll 30-90 s after the manager is ready." -ForegroundColor DarkGray
-    Write-Host "  Check Agent management → Summary in the dashboard." -ForegroundColor DarkGray
-    Write-Host "  Run .\scripts\diagnose.ps1 to verify the full pipeline." -ForegroundColor DarkGray
+    Write-Host "  Run [s] below to verify the full pipeline once they have." -ForegroundColor DarkGray
     Write-Host ""
+
+    # ── Interactive control panel ─────────────────────────────────────────────
+    # Keeps this window alive after launch so the user can drive the lab without
+    # opening a second PowerShell. Each command shells out to the existing
+    # scripts so behaviour stays consistent with the CLI workflow.
+    $dashUrl = if ($dashboardPort -gt 0) { "https://localhost:$dashboardPort" } else { "https://localhost" }
+    $genUrl  = "http://localhost:$uiPort"
+
+    function Show-ControlMenu {
+        param([string]$Dashboard, [string]$Generator)
+        Write-Host ""
+        Write-Host ("  " + [string]([char]0x2550) * 58) -ForegroundColor DarkCyan
+        Write-Host "  Wazuh Home Lab - Control Panel" -ForegroundColor Cyan
+        Write-Host ("  " + [string]([char]0x2550) * 58) -ForegroundColor DarkCyan
+        Write-Host "    Dashboard : $Dashboard" -ForegroundColor Green
+        Write-Host "    Generator : $Generator" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "    [s] status     run full pipeline diagnostic"  -ForegroundColor White
+        Write-Host "    [o] open       open the Wazuh dashboard in your browser" -ForegroundColor White
+        Write-Host "    [g] generator  open the generator UI in your browser" -ForegroundColor White
+        Write-Host "    [p] ps         list running lab containers"  -ForegroundColor White
+        Write-Host "    [l] logs       show the last 100 generator log lines"  -ForegroundColor White
+        Write-Host "    [r] restart    stop, then re-launch the lab"  -ForegroundColor White
+        Write-Host "    [d] down       stop all lab containers (keep images/data)"  -ForegroundColor Yellow
+        Write-Host "    [q] quit       leave the lab running and exit this window"  -ForegroundColor DarkGray
+        Write-Host "    [x] exit       stop the lab AND exit this window"  -ForegroundColor Red
+        Write-Host ""
+    }
+
+    $running = $true
+    Show-ControlMenu -Dashboard $dashUrl -Generator $genUrl
+
+    while ($running) {
+        Write-Host -NoNewline "  > " -ForegroundColor Cyan
+        try { $choice = (Read-Host).Trim().ToLowerInvariant() } catch { $choice = "q" }
+
+        switch ($choice) {
+            { $_ -in @("s","status","diagnose") } {
+                try {
+                    & (Join-Path $RepoRoot "scripts\diagnose.ps1") -ConfigPath $resolvedConfigPath
+                } catch {
+                    Write-Host "  [FAIL] diagnose failed: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+            { $_ -in @("o","open","dashboard") } {
+                try { Start-Process $dashUrl | Out-Null } catch {
+                    Write-Host "  Could not launch browser: $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+            }
+            { $_ -in @("g","generator","gen") } {
+                try { Start-Process $genUrl | Out-Null } catch {
+                    Write-Host "  Could not launch browser: $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+            }
+            { $_ -in @("p","ps") } {
+                # Compose v2 names containers '<project>-<service>-<n>', so a
+                # name prefix shared by both projects is the simplest filter.
+                $coreProj = $config.lab.core_project_name
+                $labProj  = $config.lab.lab_project_name
+                $rows = docker ps --format "{{.Names}}|{{.Status}}|{{.Ports}}" 2>$null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "  docker ps failed (is Docker running?)" -ForegroundColor Red
+                } else {
+                    $labRows = @($rows -split "`r?`n" |
+                                 Where-Object { $_ -and (($_ -like "$coreProj*") -or ($_ -like "$labProj*")) })
+                    if ($labRows.Count -eq 0) {
+                        Write-Host "  No lab containers are currently running." -ForegroundColor Yellow
+                    } else {
+                        Write-Host ""
+                        Write-Host ("    {0,-50} {1,-22} {2}" -f "NAME","STATUS","PORTS") -ForegroundColor DarkGray
+                        foreach ($row in $labRows) {
+                            $parts = $row -split '\|', 3
+                            Write-Host ("    {0,-50} {1,-22} {2}" -f $parts[0], $parts[1], $parts[2])
+                        }
+                    }
+                }
+            }
+            { $_ -in @("l","logs") } {
+                $gen = (docker ps --filter "name=lab-generator" --format "{{.Names}}" 2>$null | Select-Object -First 1)
+                if ($gen) {
+                    docker logs --tail 100 $gen 2>&1
+                } else {
+                    Write-Host "  lab-generator container not running." -ForegroundColor Yellow
+                }
+            }
+            { $_ -in @("r","restart") } {
+                Write-Host "  Stopping lab..." -ForegroundColor Yellow
+                try { & (Join-Path $RepoRoot "scripts\down.ps1") -ConfigPath $resolvedConfigPath } catch {
+                    Write-Host "  [WARN] down failed: $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+                Write-Host "  Re-launching in $modeLabel..." -ForegroundColor Cyan
+                try {
+                    & (Join-Path $RepoRoot "scripts\up.ps1") -ConfigPath $resolvedConfigPath -AgentMode $chosenMode
+                    Write-Host "  Lab restarted." -ForegroundColor Green
+                    Write-Host "    Dashboard : $dashUrl" -ForegroundColor Green
+                    Write-Host "    Generator : $genUrl"  -ForegroundColor Green
+                } catch {
+                    Write-Host "  [FAIL] restart failed: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+            { $_ -in @("d","down","stop") } {
+                Write-Host "  Stopping all lab containers..." -ForegroundColor Yellow
+                try {
+                    & (Join-Path $RepoRoot "scripts\down.ps1") -ConfigPath $resolvedConfigPath
+                    Write-Host "  Lab stopped. Use [r] to bring it back, or [q]/[x] to exit." -ForegroundColor Green
+                } catch {
+                    Write-Host "  [FAIL] down failed: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+            { $_ -in @("q","quit","exit-keep") } {
+                Write-Host "  Leaving the lab running. Re-run START.bat any time to manage it." -ForegroundColor DarkGray
+                $running = $false
+            }
+            { $_ -in @("x","exit","exit-down","shutdown") } {
+                Write-Host "  Stopping all lab containers..." -ForegroundColor Yellow
+                try { & (Join-Path $RepoRoot "scripts\down.ps1") -ConfigPath $resolvedConfigPath } catch {
+                    Write-Host "  [WARN] down failed: $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+                $running = $false
+            }
+            { $_ -in @("h","?","help","menu") } {
+                Show-ControlMenu -Dashboard $dashUrl -Generator $genUrl
+            }
+            "" { Show-ControlMenu -Dashboard $dashUrl -Generator $genUrl }
+            default {
+                Write-Host "  Unknown command '$choice'. Type 'h' for the menu." -ForegroundColor Yellow
+            }
+        }
+    }
 }

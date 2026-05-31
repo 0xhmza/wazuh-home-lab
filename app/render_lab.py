@@ -208,6 +208,7 @@ def render_compose(config: dict, endpoints: list[dict]) -> str:
     wazuh = config["wazuh"]
     agent_mode = config["lab"].get("agent_mode", "container")
     is_ghost = agent_mode == "ghost"
+    dashboard_port = int(config["lab"].get("dashboard_port", 0) or 0)
 
     lines: list[str] = [
         "services:",
@@ -219,6 +220,8 @@ def render_compose(config: dict, endpoints: list[dict]) -> str:
         "    restart: unless-stopped",
         "    ports:",
         f"      - \"{ui_port}:8080\"",
+        "    environment:",
+        f"      - WAZUH_DASHBOARD_PORT={dashboard_port}",
         "    command:",
         "      - python",
         "      - app/api.py",
@@ -307,10 +310,13 @@ def render(
     config_path: Path,
     repo_root: Path,
     core_network_override: str | None = None,
+    dashboard_port: int | None = None,
 ) -> tuple[Path, int]:
     config = normalize_config(load_config(config_path))
     if core_network_override:
         config["wazuh"]["core_network"] = core_network_override
+    if dashboard_port:
+        config["lab"]["dashboard_port"] = int(dashboard_port)
 
     datasets_dir = repo_root / "datasets"
     config["lab"]["datasets_dir_present"] = datasets_dir.exists()
@@ -325,6 +331,7 @@ def render(
         "seed": config["lab"]["seed"],
         "tick_seconds": config["lab"]["tick_seconds"],
         "endpoints": endpoints,
+        "dashboard_port": int(config["lab"].get("dashboard_port", 0) or 0),
     }
 
     if config["lab"].get("agent_mode") == "ghost":
@@ -362,6 +369,12 @@ def parse_args() -> argparse.Namespace:
         help="Override the auto-derived Wazuh core Docker network name. "
         "Use this when an existing Wazuh stack is running with a different project name.",
     )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=0,
+        help="Host port the Wazuh dashboard is published on. Surfaced to the generator UI.",
+    )
     return parser.parse_args()
 
 
@@ -371,6 +384,7 @@ def main() -> int:
         args.config.resolve(),
         args.repo_root.resolve(),
         core_network_override=args.core_network,
+        dashboard_port=args.dashboard_port or None,
     )
     print(f"Rendered {endpoint_count} endpoints to {compose_path}")
     return 0

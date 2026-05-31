@@ -33,6 +33,12 @@ if (-not $SkipCoreSetup) {
     & (Join-Path $PSScriptRoot "setup-core.ps1") -ConfigPath $resolvedConfigPath -SkipCertificateGeneration:$SkipCertificateGeneration
 }
 
+# Pick a free, non-privileged dashboard port (>= 10000) and remap the dashboard
+# service via a generated docker-compose.override.yml so it isn't bound to 443.
+$dashboardPort = Get-WazuhDashboardPort -RepoRoot $repoRoot
+Write-WazuhDashboardOverride -RepoRoot $repoRoot -Port $dashboardPort
+Write-Host "Wazuh dashboard will be exposed on host port $dashboardPort (https://localhost:$dashboardPort)." -ForegroundColor Cyan
+
 # Start the core stack first (so we can query the running manager for its network)
 $singleNodeRoot = Join-Path $repoRoot "vendor\wazuh-docker\single-node"
 if (Test-Path $singleNodeRoot) {
@@ -73,11 +79,11 @@ if ($managerContainer) {
     }
 }
 if (-not $detectedNetwork) {
-    Write-Host "Could not detect the Wazuh manager network — falling back to derived name." -ForegroundColor Yellow
+    Write-Host "Could not detect the Wazuh manager network - falling back to derived name." -ForegroundColor Yellow
 }
 
 # ── Render the lab overlay using the detected (or derived) network name.
-& (Join-Path $PSScriptRoot "render.ps1") -ConfigPath $resolvedConfigPath -CoreNetwork $detectedNetwork
+& (Join-Path $PSScriptRoot "render.ps1") -ConfigPath $resolvedConfigPath -CoreNetwork $detectedNetwork -DashboardPort $dashboardPort
 
 # ── Optionally wait for the manager registration port (1515) to be reachable
 # from our host, so the agent containers don't waste their initial enrollment
@@ -112,7 +118,7 @@ if (-not $NoWaitForManager) {
 
 # ── Pre-create every agent group on the manager. Wazuh refuses enrollment for
 # agents whose target group does not already exist on the manager, so we must
-# create them up-front. This is idempotent — agent_groups exits 0 if it already
+# create them up-front. This is idempotent - agent_groups exits 0 if it already
 # exists.
 if ($managerContainer) {
     $allGroups = @{}
@@ -157,7 +163,7 @@ if ($config.lab.PSObject.Properties.Match('ui_port').Count -gt 0 -and $config.la
 
 Write-Host ""
 Write-Host "Lab is up." -ForegroundColor Green
-Write-Host "  Wazuh dashboard: https://localhost  (admin / SecretPassword)"
+Write-Host "  Wazuh dashboard: https://localhost:$dashboardPort  (admin / SecretPassword)"
 Write-Host "  Generator UI:    http://localhost:$uiPort"
 Write-Host ""
 Write-Host "Synthetic agents enroll over 30 to 90 seconds. Run scripts/diagnose.ps1 to verify the pipeline." -ForegroundColor DarkGray

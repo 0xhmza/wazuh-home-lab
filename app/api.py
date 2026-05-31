@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,6 +21,7 @@ from ghost_sender import GhostSender
 # Module-level singletons; initialised by main() before uvicorn starts.
 _engine: GeneratorEngine | None = None
 _ghost_sender: GhostSender | None = None
+_dashboard_port: int = 0
 
 _STATIC = Path(__file__).parent / "static"
 
@@ -55,6 +57,10 @@ async def api_status():
     status = _engine.status()  # type: ignore[union-attr]
     if _ghost_sender is not None:
         status["ghost_sender"] = _ghost_sender.status()
+    status["dashboard_port"] = _dashboard_port
+    status["dashboard_url"] = (
+        f"https://localhost:{_dashboard_port}" if _dashboard_port else "https://localhost"
+    )
     return status
 
 
@@ -207,7 +213,15 @@ def main() -> None:
 
     runtime = json.loads(args.config.read_text(encoding="utf-8"))
 
-    global _engine, _ghost_sender
+    global _engine, _ghost_sender, _dashboard_port
+    # The dashboard host port is picked by the launcher and threaded through to
+    # the renderer; surface it to the web UI so links land on the correct URL.
+    env_port = 0
+    raw_env = os.environ.get("WAZUH_DASHBOARD_PORT", "").strip()
+    if raw_env.isdigit():
+        env_port = int(raw_env)
+    _dashboard_port = env_port or int(runtime.get("dashboard_port", 0) or 0)
+
     _engine = GeneratorEngine(runtime, args.output_root, datasets_dir=args.datasets_dir)
 
     if args.ghost_sender:
