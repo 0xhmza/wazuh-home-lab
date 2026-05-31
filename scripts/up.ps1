@@ -116,10 +116,16 @@ if (-not $NoWaitForManager) {
     }
 }
 
-# ── Pre-create every agent group on the manager. Wazuh refuses enrollment for
-# agents whose target group does not already exist on the manager, so we must
-# create them up-front. This is idempotent - agent_groups exits 0 if it already
-# exists.
+# ── Pre-create every agent group on the manager. Wazuh's authd refuses
+# enrollment for agents whose target group does not already exist
+# ("ERROR: Invalid group: X. Unable to add agent"), so we MUST create them
+# before any agent (ghost or container) tries to enroll.
+#
+# The previous version silently dropped stderr and the exit code, which hid
+# transient failures while the manager's wazuh-db / authd processes were still
+# booting. The result: zero groups created, every agent rejected, dashboard
+# stays empty. We now retry with verification and fail loudly if anything is
+# still missing at the end.
 if ($managerContainer) {
     $allGroups = @{}
     foreach ($profile in $config.profiles) {
@@ -127,17 +133,48 @@ if ($managerContainer) {
             if ($g) { $allGroups[$g] = $true }
         }
     }
-    if ($allGroups.Count -gt 0) {
-        Write-Host "Pre-creating agent groups on the manager: $($allGroups.Keys -join ', ')" -ForegroundColor Cyan
-        foreach ($group in $allGroups.Keys) {
-            # The double-slash on //var prevents MSYS / Git-Bash path conversion on Windows.
-            $env:MSYS_NO_PATHCONV = "1"
-            try {
-                docker exec $managerContainer //var/ossec/bin/agent_groups -a -g $group -q 2>$null | Out-Null
+    $wantedGroups = @($allGroups.Keys | Sort-Object)
+    if ($wantedGroups.Count -gt 0) {
+        Write-Host "Pre-creating agent groups on the manager: $($wantedGroups -join ', ')" -ForegroundColor Cyan
+        $env:MSYS_NO_PATHCONV = "1"
+        try {
+            $deadline = (Get-Date).AddSeconds(120)
+            $existing = @()
+            while ((Get-Date) -lt $deadline) {
+                # List current groups; if the binary errors out the manager is
+                # still booting, so just retry.
+                $listOut = docker exec $managerContainer //var/ossec/bin/agent_groups -l 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    $existing = @(($listOut -split "`r?`n") |
+                        ForEach-Object {
+                            if ($_ -match '^\s+([A-Za-z0-9._-]+)\s+\(\d+\)\s*$') { $Matches[1] }
+                        })
+                    $missing = @($wantedGroups | Where-Object { $_ -notin $existing })
+                    if ($missing.Count -eq 0) { break }
+                    foreach ($group in $missing) {
+                        $createOut = docker exec $managerContainer //var/ossec/bin/agent_groups -a -g $group -q 2>&1
+                        if ($LASTEXITCODE -ne 0 -and $createOut -notmatch 'already exists') {
+                            Write-Host "  create '$group' returned non-zero - manager probably still warming up, retrying" -ForegroundColor DarkGray
+                        }
+                    }
+                }
+                Start-Sleep -Seconds 2
             }
-            finally {
-                Remove-Item Env:\MSYS_NO_PATHCONV -ErrorAction SilentlyContinue
+
+            # Final verification.
+            $listOut = docker exec $managerContainer //var/ossec/bin/agent_groups -l 2>&1
+            $existing = @(($listOut -split "`r?`n") |
+                ForEach-Object {
+                    if ($_ -match '^\s+([A-Za-z0-9._-]+)\s+\(\d+\)\s*$') { $Matches[1] }
+                })
+            $missing = @($wantedGroups | Where-Object { $_ -notin $existing })
+            if ($missing.Count -gt 0) {
+                throw "Agent group(s) never created on the manager: $($missing -join ', '). Without these, every agent enrollment will be rejected with 'Invalid group'."
             }
+            Write-Host "  Verified groups on manager: $($existing -join ', ')" -ForegroundColor Green
+        }
+        finally {
+            Remove-Item Env:\MSYS_NO_PATHCONV -ErrorAction SilentlyContinue
         }
     }
 }
