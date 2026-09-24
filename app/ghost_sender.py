@@ -246,17 +246,28 @@ class GhostSender:
                 startup_sent = False
 
             try:
-                # Send the startup control message so the manager flips this
-                # agent to "active" in agent-management views. Control messages
-                # use the '#!-' prefix; the queue byte is omitted.
+                # Send the startup control message so the manager registers the
+                # connection. Control messages use the '#!-' prefix; "agent
+                # startup" is a verb remoted recognises (it flips the agent to
+                # "pending"). Immediately follow with a keep-alive so the agent
+                # advances to "active" without waiting a full interval.
                 if not startup_sent:
                     self._send_payload(sock, _build_payload(creds, b"#!-agent startup "))
+                    self._send_payload(
+                        sock, _build_payload(creds, _build_keepalive(creds.name))
+                    )
                     startup_sent = True
                     last_keepalive = time.monotonic()
 
-                # Periodic keep-alive so the agent stays "active".
+                # Periodic keep-alive so the agent stays "active". This MUST be a
+                # plain agent-info string, NOT a '#!-' control message: remoted
+                # only marks an agent active on a non-control keep-alive. Sending
+                # "#!-agent keep alive" (an unknown control verb) is rejected as
+                # an invalid control message and leaves the agent stuck "pending".
                 if time.monotonic() - last_keepalive >= self.KEEPALIVE_INTERVAL:
-                    self._send_payload(sock, _build_payload(creds, b"#!-agent keep alive"))
+                    self._send_payload(
+                        sock, _build_payload(creds, _build_keepalive(creds.name))
+                    )
                     last_keepalive = time.monotonic()
 
                 # Drain new events for this endpoint from the engine's event log.
@@ -336,6 +347,26 @@ def _derive_enc_key(agent_id: str, name: str, key: str) -> bytes:
         + hashlib.md5(agent_id.encode()).hexdigest().encode()
     ).hexdigest().encode()[:15]
     return sum2 + sum1
+
+
+def _build_keepalive(name: str) -> bytes:
+    """Return a wazuh-agent keep-alive message for endpoint ``name``.
+
+    Mirrors the real agent wire format: the CONTROL_HEADER ('#!-') prefix, the
+    uname/OS banner line, then the merged.mg group-config checksum line.
+
+    remoted routes every '#!-' message to its control handler; messages whose
+    verb is NOT "agent startup"/"agent shutdown" are parsed as a keep-alive and
+    flip the agent to "active". The banner must be '|'-delimited with the OS in
+    brackets, and the trailing line is the merged config hash ('x merged.mg' is
+    the sentinel a real agent sends before it has synced any group config).
+    Dropping the '#!-' prefix (so the message looks like a log line) or using a
+    bogus verb leaves the agent stuck "pending".
+    """
+    return (
+        f"#!-Linux |{name} |5.15.0 |1 |x86_64 [Ubuntu|22.04] - Wazuh v4.14.5\n"
+        f"x merged.mg\n"
+    ).encode("utf-8", errors="replace")
 
 
 def _build_payload(creds: _AgentCreds, message: bytes) -> bytes:

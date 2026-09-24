@@ -3,267 +3,348 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wazuh Home Lab</title>
+<title>Wazuh Home Lab — Generator</title>
 <style>
-:root {
-  --bg:       #0f172a;
-  --surface:  #1e293b;
-  --surface2: #293548;
-  --border:   #334155;
-  --text:     #e2e8f0;
-  --muted:    #64748b;
-  --accent:   #38bdf8;
-  --green:    #34d399;
-  --red:      #f87171;
-  --orange:   #fb923c;
-  --amber:    #fbbf24;
-  --purple:   #a78bfa;
-  --pink:     #f472b6;
-  --cyan:     #22d3ee;
+:root{
+  --bg:#0b1220; --surface:#131c2e; --surface-2:#1b2740; --surface-3:#243352;
+  --border:#27344b; --border-soft:#1f2a3e;
+  --text:#e7edf7; --text-dim:#aab6c9; --muted:#71809a;
+  --accent:#38bdf8; --accent-dim:#0e7490;
+  --green:#34d399; --red:#f87171; --orange:#fb923c; --amber:#fbbf24;
+  --purple:#a78bfa; --pink:#f472b6; --cyan:#22d3ee; --blue:#60a5fa;
+  --quiet:#94a3b8;
+  --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-mono:ui-monospace,'Cascadia Code','SFMono-Regular',Consolas,monospace;
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.25);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
-  font-family:ui-monospace,SFMono-Regular,'Cascadia Code',Consolas,monospace;font-size:13px;}
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:var(--surface);}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  font-family:var(--font-ui);font-size:13px;line-height:1.4;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+body{display:flex;flex-direction:column;}
+.mono{font-family:var(--font-mono);}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--surface-3);}
+button{font-family:inherit;}
 
-/* ── HEADER ──────────────────────────────────────────────────────────────── */
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
 header{
-  display:flex;align-items:center;gap:1rem;
-  padding:0 1rem;height:52px;
-  background:var(--surface);border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;gap:.9rem;flex-shrink:0;
+  padding:0 1rem;height:54px;
+  background:linear-gradient(180deg,var(--surface),var(--surface) 70%,#101826);
+  border-bottom:1px solid var(--border);
 }
-.logo{font-size:1rem;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:-.02em;}
-.logo span{color:var(--muted);}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
-  box-shadow:0 0 6px var(--green);animation:pulse 2s ease-in-out infinite;}
-.status-dot.paused{background:var(--muted);box-shadow:none;animation:none;}
-.status-dot.storm{background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse .6s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-.status-label{font-size:.75rem;color:var(--muted);}
-.status-label.storm-text{color:var(--red);font-weight:700;letter-spacing:.05em;}
-.stat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:.2rem .6rem;font-size:.72rem;color:var(--muted);white-space:nowrap;}
-.stat-pill strong{color:var(--text);}
+.logo{font-size:.98rem;font-weight:700;color:var(--text);white-space:nowrap;letter-spacing:-.01em;}
+.logo .sh{color:var(--accent);}
+.logo .dim{color:var(--muted);font-weight:600;}
+.sep{width:1px;height:26px;background:var(--border);flex-shrink:0;}
+
+.status{display:flex;align-items:center;gap:.45rem;}
+.status-dot{width:9px;height:9px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 0 rgba(52,211,153,.5);animation:pulse 2.4s ease-out infinite;}
+.status-dot.paused{background:var(--quiet);box-shadow:none;animation:none;}
+.status-dot.storm{background:var(--red);animation:pulse .7s ease-out infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 currentColor;opacity:1;}
+  70%{box-shadow:0 0 0 6px transparent;opacity:.85;}100%{box-shadow:0 0 0 0 transparent;opacity:1;}}
+.status-label{font-size:.74rem;font-weight:600;color:var(--text-dim);letter-spacing:.02em;}
+.status-label.storm-text{color:var(--red);letter-spacing:.06em;}
+.status-label.paused-text{color:var(--quiet);}
+
+.metrics{display:flex;align-items:center;gap:.4rem;}
+.metric{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;
+  padding:.15rem .6rem;border-radius:var(--radius-sm);background:var(--surface-2);
+  border:1px solid var(--border-soft);min-width:max-content;}
+.metric b{font-family:var(--font-mono);font-size:.92rem;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;}
+.metric span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.metric.live b{color:var(--green);}
+.metric.quiet-metric{cursor:pointer;transition:border-color .15s;}
+.metric.quiet-metric.has b{color:var(--amber);}
+.metric.quiet-metric.has{border-color:#5b4a17;background:#221d10;}
+.metric.quiet-metric:hover{border-color:var(--amber);}
+
 .spacer{flex:1;}
-.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
-  border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.75rem;
-  font-family:inherit;transition:all .15s;white-space:nowrap;}
-.btn:hover{filter:brightness(1.2);}
-.btn-ghost{background:transparent;color:var(--muted);}
-.btn-ghost:hover{color:var(--text);border-color:var(--text);}
-.btn-red{background:#7f1d1d;color:var(--red);border-color:#991b1b;}
-.btn-red:hover{background:#991b1b;}
-.btn-green{background:#064e3b;color:var(--green);border-color:#065f46;}
-.btn-green:hover{background:#065f46;}
-.btn-storm{background:#3b0764;color:var(--purple);border-color:#4c1d95;font-weight:700;}
-.btn-storm.active{background:#4c1d95;color:#fff;border-color:var(--purple);
-  box-shadow:0 0 12px var(--purple);animation:pulse .8s infinite;}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;
+  border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;
+  font-size:.75rem;font-weight:600;color:var(--text-dim);background:var(--surface-2);
+  transition:all .14s;white-space:nowrap;}
+.btn:hover{filter:brightness(1.15);color:var(--text);}
+.btn:active{transform:translateY(1px);}
+.btn .ico{font-size:.85rem;line-height:1;}
+.btn-ghost{background:transparent;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-green{background:#0c3b2e;color:var(--green);border-color:#14543f;}
+.btn-red{background:#3d1b1f;color:var(--red);border-color:#5e2329;}
+.btn-storm{background:#2c1454;color:var(--purple);border-color:#43248a;}
+.btn-storm.active{background:#5b21b6;color:#fff;border-color:var(--purple);
+  box-shadow:0 0 14px rgba(167,139,250,.55);animation:pulse 1s infinite;}
 
-/* ── PRESET BAR ──────────────────────────────────────────────────────────── */
-.preset-bar{
-  display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
-  padding:.5rem 1rem;background:var(--bg);border-bottom:1px solid var(--border);
-}
-.preset-bar-label{font-size:.7rem;color:var(--muted);margin-right:.25rem;}
-.preset-btn{
-  display:inline-flex;align-items:center;gap:.4rem;
-  padding:.25rem .6rem;border-radius:5px;border:1px solid;
-  cursor:pointer;font-size:.72rem;font-family:inherit;transition:all .15s;
-}
-.preset-btn:hover{filter:brightness(1.15);transform:translateY(-1px);}
-.preset-btn.active{box-shadow:0 0 8px currentColor;filter:brightness(1.2);}
+/* ── TOOLBAR ────────────────────────────────────────────────────────────── */
+.toolbar{display:flex;align-items:center;gap:.75rem;flex-shrink:0;
+  padding:.45rem 1rem;background:var(--bg);border-bottom:1px solid var(--border-soft);}
+.filters{display:flex;gap:.3rem;}
+.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.28rem .7rem;
+  border-radius:999px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-dim);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .14s;}
+.chip:hover{border-color:var(--text-dim);color:var(--text);}
+.chip.active{background:var(--surface-3);color:var(--text);border-color:var(--accent);}
+.chip .dot{width:7px;height:7px;border-radius:50%;}
+.chip .num{font-family:var(--font-mono);opacity:.85;}
+.search{display:flex;align-items:center;gap:.4rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:.25rem .55rem;}
+.search input{background:transparent;border:none;outline:none;color:var(--text);
+  font-family:var(--font-mono);font-size:.73rem;width:150px;}
+.search input::placeholder{color:var(--muted);}
+.search .ico{color:var(--muted);font-size:.8rem;}
 
-/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
-.main{display:flex;height:calc(100vh - 52px - 45px);overflow:hidden;}
+.preset-bar{display:flex;align-items:center;gap:.4rem;margin-left:auto;
+  overflow-x:auto;max-width:55%;padding-bottom:1px;}
+.preset-bar::-webkit-scrollbar{height:4px;}
+.preset-bar-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.08em;white-space:nowrap;flex-shrink:0;}
+.preset-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .6rem;
+  border-radius:var(--radius-sm);border:1px solid;cursor:pointer;font-size:.71rem;
+  font-weight:600;white-space:nowrap;flex-shrink:0;transition:all .14s;}
+.preset-btn:hover{filter:brightness(1.2);transform:translateY(-1px);}
+.preset-btn.active{box-shadow:0 0 0 1px currentColor inset;filter:brightness(1.25);}
 
-/* ── ENDPOINTS PANEL ─────────────────────────────────────────────────────── */
-.endpoints-panel{flex:1;overflow-y:auto;padding:.75rem;}
-.endpoints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.75rem;}
-.ep-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  overflow:hidden;transition:border-color .2s;
-}
-.ep-card:hover{border-color:var(--accent);}
-.ep-card.paused{opacity:.65;}
-.ep-card.storm-card{border-color:var(--red);box-shadow:0 0 8px rgba(248,113,113,.25);}
-.ep-header{
-  display:flex;align-items:center;gap:.5rem;
-  padding:.55rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);
-}
-.ep-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
-.ep-dot.paused{background:var(--muted);}
-.ep-dot.storm{background:var(--red);animation:pulse .6s infinite;}
-.ep-name{font-weight:700;font-size:.85rem;flex:1;}
-.ep-profile{font-size:.65rem;color:var(--muted);background:var(--surface);
-  border:1px solid var(--border);border-radius:4px;padding:.1rem .4rem;white-space:nowrap;}
-.ep-actions{display:flex;gap:.35rem;}
-.icon-btn{
-  background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;
-  padding:.15rem .3rem;border-radius:4px;transition:color .15s,background .15s;
-}
-.icon-btn:hover{color:var(--text);background:var(--surface);}
-.ep-body{padding:.6rem .75rem;}
-.ep-stats{display:flex;gap:.75rem;margin-bottom:.5rem;}
-.stat{display:flex;flex-direction:column;}
-.stat-val{font-size:1.1rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
-.stat-lbl{font-size:.65rem;color:var(--muted);}
-.scenario-pills{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem;}
-.sc-pill{
-  font-size:.65rem;padding:.1rem .4rem;border-radius:3px;
-  white-space:nowrap;border:1px solid transparent;
-}
+/* ── QUIET BANNER ───────────────────────────────────────────────────────── */
+.quiet-banner{display:none;align-items:center;gap:.65rem;flex-shrink:0;
+  padding:.5rem 1rem;background:linear-gradient(90deg,#241d0d,#1c1810);
+  border-bottom:1px solid #4a3c14;color:var(--amber);font-size:.74rem;}
+.quiet-banner.show{display:flex;}
+.quiet-banner .qb-ico{font-size:.95rem;}
+.quiet-banner b{font-weight:700;}
+.quiet-banner .qb-list{display:flex;gap:.35rem;flex-wrap:wrap;flex:1;min-width:0;overflow:hidden;}
+.qb-tag{font-family:var(--font-mono);font-size:.68rem;background:#3a2f12;
+  border:1px solid #5b4a17;color:#fcd34d;border-radius:5px;padding:.1rem .45rem;
+  cursor:pointer;transition:all .14s;}
+.qb-tag:hover{background:#4d3e16;color:#fff;}
+.quiet-banner .btn{margin-left:auto;flex-shrink:0;}
 
-/* ── LIVE FEED ───────────────────────────────────────────────────────────── */
-.feed-panel{
-  width:400px;min-width:320px;display:flex;flex-direction:column;
-  border-left:1px solid var(--border);
-}
-.feed-header{
-  display:flex;align-items:center;gap:.5rem;
-  padding:.5rem .75rem;border-bottom:1px solid var(--border);
-  background:var(--surface);flex-shrink:0;
-}
-.feed-title{font-weight:700;color:var(--accent);font-size:.8rem;}
-.feed-count{font-size:.7rem;color:var(--muted);}
-.feed-controls{display:flex;gap:.35rem;margin-left:auto;}
-.toggle-autoscroll{
-  font-size:.7rem;cursor:pointer;color:var(--muted);background:none;
-  border:1px solid var(--border);border-radius:4px;padding:.15rem .4rem;
-  font-family:inherit;transition:all .15s;
-}
-.toggle-autoscroll.on{color:var(--green);border-color:var(--green);}
-.feed-filter{
-  font-size:.7rem;background:var(--surface2);border:1px solid var(--border);
-  border-radius:4px;color:var(--text);padding:.15rem .4rem;font-family:inherit;
-  cursor:pointer;
-}
-.feed-list{flex:1;overflow-y:auto;padding:.35rem;}
-.feed-item{
-  display:grid;grid-template-columns:auto 1fr;gap:.3rem .5rem;
-  padding:.35rem .4rem;border-radius:5px;margin-bottom:.25rem;
-  border-left:2px solid var(--border);background:var(--surface);
-  transition:opacity .2s;
-  animation:slideIn .15s ease-out;
-}
-@keyframes slideIn{from{opacity:0;transform:translateX(4px);}to{opacity:1;transform:translateX(0);}}
-.feed-item:hover{background:var(--surface2);}
-.feed-badge{
-  font-size:.6rem;padding:.1rem .35rem;border-radius:3px;font-weight:700;
-  white-space:nowrap;align-self:start;
-}
-.feed-meta{font-size:.65rem;color:var(--muted);}
-.feed-msg{
-  grid-column:1/-1;font-size:.65rem;color:#94a3b8;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  padding-top:.1rem;
-}
+/* ── MAIN ───────────────────────────────────────────────────────────────── */
+.main{display:flex;flex:1;min-height:0;}
+.endpoints-panel{flex:1;overflow-y:auto;padding:.85rem;min-width:0;}
+.endpoints-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));
+  gap:.85rem;align-content:start;}
+.empty-hint{color:var(--muted);padding:2.5rem 1rem;text-align:center;font-size:.8rem;}
 
-/* ── DRAWER ──────────────────────────────────────────────────────────────── */
-.drawer-overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
-}
-.drawer-overlay.open{display:block;}
-.drawer{
-  position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100vw;
-  background:var(--surface);border-left:1px solid var(--border);
-  display:flex;flex-direction:column;z-index:201;
-  transform:translateX(100%);transition:transform .25s ease;
-}
-.drawer.open{transform:translateX(0);}
-.drawer-head{
-  display:flex;align-items:center;gap:.6rem;
-  padding:.75rem 1rem;border-bottom:1px solid var(--border);
-  background:var(--surface2);flex-shrink:0;
-}
-.drawer-title{font-weight:700;font-size:.9rem;flex:1;}
-.drawer-subtitle{font-size:.7rem;color:var(--muted);}
-.drawer-close{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:.2rem;}
-.drawer-close:hover{color:var(--text);}
-.drawer-body{flex:1;overflow-y:auto;padding:1rem;}
-.drawer-section{margin-bottom:1.25rem;}
-.drawer-section-title{
-  font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
-  margin-bottom:.6rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);
-}
-.slider-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
-.slider-name{flex:1;font-size:.75rem;color:var(--text);min-width:0;
+/* ── ENDPOINT CARD ──────────────────────────────────────────────────────── */
+.ep-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);transition:border-color .18s,opacity .25s,filter .25s,transform .12s;
+  position:relative;}
+.ep-card:hover{border-color:var(--accent-dim);transform:translateY(-1px);}
+.ep-card.hidden{display:none;}
+.ep-card.flash{animation:flash 1.1s ease-out;}
+@keyframes flash{0%{box-shadow:0 0 0 2px var(--accent);}100%{box-shadow:var(--shadow);}}
+/* quiet (per-endpoint paused) */
+.ep-card.quiet{opacity:.6;filter:grayscale(.9);border-style:dashed;border-color:var(--border);}
+.ep-card.quiet:hover{opacity:.92;filter:grayscale(.4);transform:none;}
+.ep-card.quiet .ep-header{background:var(--surface);}
+/* globally halted but not individually quieted */
+.ep-card.halted{opacity:.78;}
+.ep-card.storm-card{border-color:var(--red);box-shadow:0 0 0 1px rgba(248,113,113,.3),var(--shadow);}
+
+.ep-header{display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;
+  background:var(--surface-2);border-bottom:1px solid var(--border-soft);}
+.ep-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;
+  box-shadow:0 0 6px rgba(52,211,153,.6);}
+.ep-dot.paused{background:var(--quiet);box-shadow:none;}
+.ep-dot.storm{background:var(--red);animation:pulse .7s infinite;}
+.ep-dot.halted{background:var(--muted);box-shadow:none;}
+.ep-name{font-family:var(--font-mono);font-weight:700;font-size:.84rem;flex:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.slider-val{width:32px;text-align:right;font-size:.75rem;color:var(--accent);font-weight:700;}
-.slider-range{flex:0 0 120px;}
-input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
-.double-slider{display:flex;gap:.5rem;align-items:center;}
-.double-slider label{font-size:.72rem;color:var(--muted);white-space:nowrap;}
-.double-slider input[type=number]{
-  width:60px;background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);border-radius:4px;padding:.2rem .4rem;font-size:.75rem;font-family:inherit;
-}
-.prob-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
-.prob-row label{font-size:.72rem;color:var(--muted);white-space:nowrap;min-width:120px;}
-.drawer-footer{
-  padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;flex-shrink:0;
-}
-.btn-primary{background:var(--accent);color:#0f172a;border-color:var(--accent);font-weight:700;}
-.btn-primary:hover{background:#7dd3fc;}
-.btn-danger-ghost{background:transparent;color:var(--red);border-color:#7f1d1d;}
-.btn-danger-ghost:hover{background:#7f1d1d;}
+.ep-badge{font-size:.58rem;font-weight:700;letter-spacing:.06em;padding:.12rem .4rem;
+  border-radius:4px;text-transform:uppercase;flex-shrink:0;}
+.ep-badge.quiet{background:#3a2f12;color:var(--amber);border:1px solid #5b4a17;}
+.ep-profile{font-size:.62rem;color:var(--muted);background:var(--surface);
+  border:1px solid var(--border-soft);border-radius:4px;padding:.12rem .4rem;
+  white-space:nowrap;flex-shrink:0;}
+.ep-actions{display:flex;gap:.15rem;flex-shrink:0;}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.82rem;
+  padding:.22rem .35rem;border-radius:5px;line-height:1;transition:all .14s;}
+.icon-btn:hover{color:var(--text);background:var(--surface-3);}
 
-/* ── TOAST ───────────────────────────────────────────────────────────────── */
-#toast{
-  position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;
-  background:#134e4a;border:1px solid var(--green);color:var(--green);
-  border-radius:6px;padding:.5rem 1rem;font-size:.75rem;
-  opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;
-}
-#toast.show{opacity:1;transform:translateY(0);}
+.ep-body{padding:.65rem .75rem .7rem;}
+.ep-stats{display:flex;gap:1.1rem;margin-bottom:.55rem;}
+.stat{display:flex;flex-direction:column;gap:.1rem;}
+.stat-val{font-family:var(--font-mono);font-size:1.12rem;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;line-height:1;}
+.stat-val.live{color:var(--green);}
+.stat-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+/* activity meter */
+.activity{height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;margin-bottom:.55rem;}
+.activity-bar{height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent));
+  width:0%;border-radius:2px;transition:width .5s ease;}
+.ep-card.storm-card .activity-bar{background:linear-gradient(90deg,#b91c1c,var(--red));}
+.scenario-pills{display:flex;flex-wrap:wrap;gap:.3rem;}
+.sc-pill{font-size:.63rem;padding:.12rem .42rem;border-radius:4px;white-space:nowrap;
+  border:1px solid transparent;font-weight:600;}
+.sc-more{font-size:.62rem;color:var(--muted);align-self:center;}
+
+/* ── LIVE FEED ──────────────────────────────────────────────────────────── */
+.feed-panel{width:390px;min-width:330px;display:flex;flex-direction:column;
+  border-left:1px solid var(--border);background:var(--surface);}
+.feed-header{display:flex;align-items:center;gap:.5rem;flex-shrink:0;
+  padding:.6rem .75rem;border-bottom:1px solid var(--border-soft);background:var(--surface-2);}
+.feed-title{font-weight:700;font-size:.78rem;color:var(--text);display:flex;align-items:center;gap:.4rem;}
+.feed-title .ico{color:var(--accent);}
+.feed-count{font-family:var(--font-mono);font-size:.66rem;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:5px;padding:.05rem .4rem;}
+.feed-controls{display:flex;gap:.35rem;margin-left:auto;}
+.feed-filter{font-size:.69rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);padding:.2rem .4rem;font-family:var(--font-mono);cursor:pointer;outline:none;}
+.toggle-autoscroll{font-size:.69rem;font-weight:600;cursor:pointer;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:.2rem .45rem;transition:all .14s;}
+.toggle-autoscroll.on{color:var(--green);border-color:#14543f;}
+.feed-list{flex:1;overflow-y:auto;padding:.4rem;}
+.feed-item{display:grid;grid-template-columns:auto 1fr;gap:.2rem .5rem;
+  padding:.4rem .5rem;border-radius:var(--radius-sm);margin-bottom:.3rem;
+  border-left:2px solid var(--border);background:var(--surface-2);
+  animation:slideIn .18s ease-out;}
+@keyframes slideIn{from{opacity:0;transform:translateX(6px);}to{opacity:1;transform:none;}}
+.feed-item:hover{background:var(--surface-3);}
+.feed-badge{font-size:.58rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;
+  white-space:nowrap;align-self:start;}
+.feed-meta{font-family:var(--font-mono);font-size:.64rem;color:var(--muted);align-self:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.feed-msg{grid-column:1/-1;font-family:var(--font-mono);font-size:.65rem;color:#9fb0c9;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.feed-empty{color:var(--muted);text-align:center;padding:2rem 1rem;font-size:.75rem;}
+
+/* ── DRAWER ─────────────────────────────────────────────────────────────── */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(3,7,18,.65);
+  backdrop-filter:blur(2px);z-index:200;}
+.drawer-overlay.open{display:block;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:100vw;
+  background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;
+  z-index:201;transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);
+  box-shadow:-12px 0 40px rgba(0,0,0,.45);}
+.drawer.open{transform:none;}
+.drawer-head{display:flex;align-items:center;gap:.6rem;padding:.85rem 1rem;
+  border-bottom:1px solid var(--border);background:var(--surface-2);flex-shrink:0;}
+.drawer-title{font-family:var(--font-mono);font-weight:700;font-size:.92rem;flex:1;}
+.drawer-subtitle{font-size:.68rem;color:var(--muted);}
+.drawer-close{background:none;border:none;color:var(--muted);font-size:1.15rem;cursor:pointer;
+  padding:.2rem .4rem;border-radius:5px;}
+.drawer-close:hover{color:var(--text);background:var(--surface-3);}
+.drawer-body{flex:1;overflow-y:auto;padding:1rem;}
+.drawer-section{margin-bottom:1.3rem;}
+.drawer-section-title{font-size:.66rem;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.09em;font-weight:700;margin-bottom:.7rem;padding-bottom:.35rem;
+  border-bottom:1px solid var(--border-soft);}
+.cat-group{margin-bottom:.85rem;}
+.cat-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;}
+.slider-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;}
+.slider-name{flex:1;font-size:.74rem;color:var(--text-dim);min-width:0;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;}
+.slider-val{width:26px;text-align:right;font-family:var(--font-mono);font-size:.74rem;
+  color:var(--accent);font-weight:700;}
+input[type=range]{accent-color:var(--accent);cursor:pointer;}
+.slider-range{flex:0 0 130px;}
+.double-slider{display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;}
+.double-slider label{font-size:.7rem;color:var(--muted);white-space:nowrap;}
+.double-slider input[type=number],.num-in{width:64px;background:var(--surface-2);
+  border:1px solid var(--border);color:var(--text);border-radius:5px;padding:.25rem .45rem;
+  font-size:.74rem;font-family:var(--font-mono);outline:none;}
+.num-in:focus,.double-slider input:focus{border-color:var(--accent);}
+.prob-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;}
+.prob-row label{font-size:.7rem;color:var(--muted);white-space:nowrap;min-width:118px;}
+.drawer-footer{padding:.8rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;flex-shrink:0;}
+.btn-primary{background:var(--accent);color:#06243a;border-color:var(--accent);font-weight:700;flex:1;justify-content:center;}
+.btn-primary:hover{background:#7dd3fc;filter:none;}
+
+/* ── TOAST ──────────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(10px);
+  z-index:999;background:var(--surface-3);border:1px solid var(--border);color:var(--text);
+  border-radius:var(--radius-sm);padding:.55rem 1.1rem;font-size:.76rem;font-weight:600;
+  box-shadow:var(--shadow);opacity:0;transition:all .22s;pointer-events:none;display:flex;align-items:center;gap:.5rem;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast .tico{font-size:.9rem;}
+#toast.ok{border-color:#14543f;}#toast.ok .tico{color:var(--green);}
+#toast.warn{border-color:#5b4a17;}#toast.warn .tico{color:var(--amber);}
 </style>
 </head>
 <body>
 
 <!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
 <header>
-  <div class="logo">&#x1F6E1;&#xFE0F; Wazuh <span>Home Lab</span></div>
-  <div id="statusDot" class="status-dot"></div>
-  <div id="statusLabel" class="status-label">running</div>
-  <div class="stat-pill"><strong id="totalEvts">0</strong> events</div>
-  <div class="stat-pill"><strong id="evtPerMin">0</strong> /min</div>
-  <div class="stat-pill"><strong id="epCount">0</strong> endpoints</div>
-  <div class="stat-pill" id="datasetPill" title="Real-world log lines available for dataset_replay">&#x1F4DA; <strong id="datasetLines">0</strong> dataset lines</div>
+  <div class="logo">&#x1F6E1;&#xFE0F; <span class="sh">Wazuh</span> <span class="dim">Home Lab</span></div>
+  <div class="sep"></div>
+  <div class="status">
+    <div id="statusDot" class="status-dot"></div>
+    <div id="statusLabel" class="status-label">running</div>
+  </div>
+  <div class="sep"></div>
+  <div class="metrics">
+    <div class="metric"><b id="totalEvts">0</b><span>events</span></div>
+    <div class="metric live"><b id="evtPerMin">0</b><span>/ min</span></div>
+    <div class="metric"><b id="activeCount">0</b><span>active</span></div>
+    <div class="metric quiet-metric" id="quietMetric" onclick="setFilter('quiet')" title="Show quiet machines">
+      <b id="quietCount">0</b><span>quiet</span></div>
+    <div class="metric" id="datasetPill" title="Real-world log lines available for dataset_replay">
+      <b id="datasetLines">0</b><span>&#x1F4DA; dataset</span></div>
+  </div>
   <div class="spacer"></div>
-  <a id="dashboardLink" class="btn btn-ghost" href="https://localhost" target="_blank" rel="noreferrer noopener" title="Open the Wazuh dashboard in a new tab">&#x1F50E; Wazuh Dashboard &#x2197;</a>
-  <button class="btn btn-green" onclick="globalAction('resume')">&#x25B6; Resume All</button>
-  <button class="btn btn-red"   onclick="globalAction('pause')">&#x23F8; Pause All</button>
-  <button id="stormBtn" class="btn btn-storm" onclick="toggleStorm()">&#x26A1; STORM</button>
+  <a id="dashboardLink" class="btn btn-ghost" href="https://localhost" target="_blank" rel="noreferrer noopener"
+     title="Open the Wazuh dashboard"><span class="ico">&#x1F50E;</span> Wazuh Dashboard &#x2197;</a>
+  <button class="btn btn-green" onclick="globalAction('resume')"><span class="ico">&#x25B6;</span> Resume All</button>
+  <button class="btn btn-red"   onclick="globalAction('pause')"><span class="ico">&#x23F8;</span> Pause All</button>
+  <button id="stormBtn" class="btn btn-storm" onclick="toggleStorm()"><span class="ico">&#x26A1;</span> STORM</button>
 </header>
 
-<!-- ── PRESET BAR ─────────────────────────────────────────────────────────── -->
-<div class="preset-bar" id="presetBar">
-  <span class="preset-bar-label">PRESETS &rsaquo;</span>
+<!-- ── TOOLBAR ────────────────────────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="filters">
+    <button class="chip active" data-filter="all" onclick="setFilter('all')">
+      All <span class="num" id="cAll">0</span></button>
+    <button class="chip" data-filter="active" onclick="setFilter('active')">
+      <span class="dot" style="background:var(--green)"></span> Active <span class="num" id="cActive">0</span></button>
+    <button class="chip" data-filter="quiet" onclick="setFilter('quiet')">
+      <span class="dot" style="background:var(--quiet)"></span> Quiet <span class="num" id="cQuiet">0</span></button>
+  </div>
+  <div class="search">
+    <span class="ico">&#x1F50D;</span>
+    <input id="searchBox" type="text" placeholder="filter machines…" oninput="applyFilter()" spellcheck="false">
+  </div>
+  <div class="preset-bar" id="presetBar">
+    <span class="preset-bar-label">Presets</span>
+  </div>
+</div>
+
+<!-- ── QUIET BANNER ───────────────────────────────────────────────────────── -->
+<div class="quiet-banner" id="quietBanner">
+  <span class="qb-ico">&#x1F507;</span>
+  <span><b id="qbCount">0</b> machine(s) are <b>quiet</b> (paused — not sending events):</span>
+  <span class="qb-list" id="qbList"></span>
+  <button class="btn btn-green" onclick="resumeAllQuiet()"><span class="ico">&#x25B6;</span> Resume all quiet</button>
 </div>
 
 <!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
 <div class="main">
   <div class="endpoints-panel">
     <div class="endpoints-grid" id="endpointsGrid">
-      <div style="color:var(--muted);padding:2rem;">Loading endpoints&hellip;</div>
+      <div class="empty-hint">Loading machines&hellip;</div>
     </div>
   </div>
 
-  <!-- ── LIVE FEED ────────────────────────────────────────────────────────── -->
   <div class="feed-panel">
     <div class="feed-header">
-      <span class="feed-title">&#x1F4E1; Live Events</span>
+      <span class="feed-title"><span class="ico">&#x1F4E1;</span> Live Events</span>
       <span class="feed-count" id="feedCount">0</span>
       <div class="feed-controls">
         <select class="feed-filter" id="feedFilter" onchange="filterFeed()">
-          <option value="">All endpoints</option>
+          <option value="">all</option>
         </select>
         <button class="toggle-autoscroll on" id="scrollBtn" onclick="toggleScroll()">&#x2193; auto</button>
       </div>
     </div>
-    <div class="feed-list" id="feedList"></div>
+    <div class="feed-list" id="feedList">
+      <div class="feed-empty" id="feedEmpty">Waiting for events&hellip;</div>
+    </div>
   </div>
 </div>
 
@@ -271,446 +352,459 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-head">
-    <div>
-      <div class="drawer-title" id="drawerTitle">Edit Endpoint</div>
+    <div style="flex:1;min-width:0;">
+      <div class="drawer-title" id="drawerTitle">Edit</div>
       <div class="drawer-subtitle" id="drawerSub"></div>
     </div>
     <button class="drawer-close" onclick="closeDrawer()">&#x2715;</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
   <div class="drawer-footer">
-    <button class="btn btn-primary" onclick="saveDrawer()">&#x2713; Apply Changes</button>
+    <button class="btn btn-primary" onclick="saveDrawer()"><span class="ico">&#x2713;</span> Apply Changes</button>
     <button class="btn btn-ghost" onclick="closeDrawer()">Cancel</button>
   </div>
 </div>
 
-<!-- ── TOAST ──────────────────────────────────────────────────────────────── -->
 <div id="toast"></div>
 
 <script>
-// ── state ─────────────────────────────────────────────────────────────────────
+// ── state ───────────────────────────────────────────────────────────────────
 const S = {
-  endpoints: [],
-  status: { global_paused: false, storm_mode: false, total_events: 0, events_last_minute: 0 },
-  scenarios: [],
-  presets: [],
-  autoScroll: true,
-  feedFilter: '',
-  feedTotal: 0,
-  currentEp: null,   // endpoint being edited in drawer
+  endpoints: [], scenarios: [], presets: [],
+  status: { global_paused:false, storm_mode:false, total_events:0, events_last_minute:0 },
+  autoScroll:true, feedFilter:'', feedTotal:0, currentEp:null,
+  gridFilter:'all', search:'', maxEpm:1,
 };
 
-// ── scenario → category colour mapping ───────────────────────────────────────
 const CAT_COLORS = {
-  auth:      '#f87171',
-  privesc:   '#fb923c',
-  web:       '#a78bfa',
-  network:   '#22d3ee',
-  persistence:'#fbbf24',
-  discovery: '#60a5fa',
-  lateral:   '#f472b6',
-  exfil:     '#fb923c',
-  impact:    '#ef4444',
-  noise:     '#475569',
+  auth:'#f87171', privesc:'#fb923c', web:'#a78bfa', network:'#22d3ee',
+  persistence:'#fbbf24', discovery:'#60a5fa', lateral:'#f472b6',
+  exfil:'#fb923c', impact:'#ef4444', noise:'#64748b',
 };
-
-function catColor(cat) { return CAT_COLORS[cat] || '#64748b'; }
+const catColor = c => CAT_COLORS[c] || '#64748b';
+const LABEL_RX = /^(ssh|web|lateral|sudo|pam|generic|kernel|system|apache|nginx|openvpn|suricata|port|new|cron|sensitive|large|iptables|process)\s*/i;
+const shortLabel = (meta, fallback) => (meta.label || fallback).replace(LABEL_RX,'');
 
 // ── API helpers ───────────────────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = { method, headers: {} };
-  if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+async function api(method, path, body){
+  const opts = { method, headers:{} };
+  if (body !== undefined){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
   const r = await fetch(path, opts);
   if (!r.ok) throw new Error(`${method} ${path} → ${r.status}`);
   return r.json();
 }
-const GET  = path       => api('GET',   path);
-const POST = path       => api('POST',  path);
-const PATCH= (path, b) => api('PATCH', path, b);
+const GET=p=>api('GET',p), POST=p=>api('POST',p), PATCH=(p,b)=>api('PATCH',p,b);
 
-// ── toast ─────────────────────────────────────────────────────────────────────
+// ── toast ───────────────────────────────────────────────────────────────────
 let _toastTimer;
-function toast(msg) {
+function toast(msg, kind='ok'){
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
+  el.className = kind==='warn'?'warn':'ok';
+  el.innerHTML = `<span class="tico">${kind==='warn'?'&#9888;':'&#10003;'}</span>${msg}`;
+  el.classList.add('show', kind);
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  _toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
 }
 
 // ── init ──────────────────────────────────────────────────────────────────────
-async function init() {
-  [S.scenarios, S.presets] = await Promise.all([
-    GET('/api/scenarios'),
-    GET('/api/presets'),
-  ]);
+async function init(){
+  [S.scenarios, S.presets] = await Promise.all([GET('/api/scenarios'), GET('/api/presets')]);
   renderPresets();
   await refresh();
   setInterval(refresh, 2000);
   connectSSE();
+  document.addEventListener('keydown', e => { if (e.key==='Escape') closeDrawer(); });
 }
 
-// ── polling refresh ───────────────────────────────────────────────────────────
-async function refresh() {
-  try {
-    [S.status, S.endpoints] = await Promise.all([
-      GET('/api/status'),
-      GET('/api/endpoints'),
-    ]);
+// ── polling refresh ─────────────────────────────────────────────────────────
+async function refresh(){
+  try{
+    [S.status, S.endpoints] = await Promise.all([GET('/api/status'), GET('/api/endpoints')]);
+    S.maxEpm = Math.max(1, ...S.endpoints.map(e=>e.events_last_minute||0));
     applyStatus();
     renderEndpoints();
+    updateCounts();
     updateFeedFilter();
-  } catch(e) { /* backend may be restarting */ }
+  }catch(e){ /* backend may be restarting */ }
 }
 
-function applyStatus() {
+function applyStatus(){
   const { global_paused, storm_mode, total_events, events_last_minute, endpoint_count } = S.status;
-  const dot   = document.getElementById('statusDot');
-  const label = document.getElementById('statusLabel');
-  dot.className = 'status-dot' + (storm_mode ? ' storm' : global_paused ? ' paused' : '');
-  label.className = 'status-label' + (storm_mode ? ' storm-text' : '');
-  label.textContent = storm_mode ? '⚡ STORM MODE' : global_paused ? 'paused' : 'running';
+  const dot=document.getElementById('statusDot'), label=document.getElementById('statusLabel');
+  dot.className   = 'status-dot' + (storm_mode?' storm':global_paused?' paused':'');
+  label.className = 'status-label' + (storm_mode?' storm-text':global_paused?' paused-text':'');
+  label.textContent = storm_mode?'⚡ STORM MODE':global_paused?'ALL PAUSED':'running';
+
   document.getElementById('totalEvts').textContent = total_events.toLocaleString();
   document.getElementById('evtPerMin').textContent = events_last_minute.toLocaleString();
-  document.getElementById('epCount').textContent   = endpoint_count;
-  const dsLines = (S.status.dataset_lines_total ?? 0);
+
+  const dsLines = S.status.dataset_lines_total ?? 0;
   document.getElementById('datasetLines').textContent = dsLines.toLocaleString();
   const dsPill = document.getElementById('datasetPill');
-  dsPill.style.display = dsLines > 0 ? '' : 'none';
-  if (dsLines > 0 && S.status.datasets) {
-    dsPill.title = 'Real-world replay sources:\n' +
-      S.status.datasets.map(d => `  ${d.name} (${d.category}): ${d.line_count} lines`).join('\n');
-  }
+  dsPill.style.display = dsLines>0 ? '' : 'none';
+  if (dsLines>0 && S.status.datasets)
+    dsPill.title = 'Real-world replay sources:\n' + S.status.datasets.map(d=>`  ${d.name} (${d.category}): ${d.line_count} lines`).join('\n');
 
-  const stormBtn = document.getElementById('stormBtn');
-  stormBtn.classList.toggle('active', storm_mode);
+  document.getElementById('stormBtn').classList.toggle('active', storm_mode);
+  _stormActive = storm_mode;
 
-  // Dashboard URL is picked at launch time (random port >= 10000) — keep the
-  // header link in sync so users land on the right page.
   const link = document.getElementById('dashboardLink');
-  if (link && S.status.dashboard_url && link.href !== S.status.dashboard_url) {
+  if (link && S.status.dashboard_url && link.href !== S.status.dashboard_url){
     link.href = S.status.dashboard_url;
-    link.title = `Open the Wazuh dashboard in a new tab (${S.status.dashboard_url})`;
+    link.title = `Open the Wazuh dashboard (${S.status.dashboard_url})`;
   }
+}
 
-  // Storm mode — pulse header
-  document.querySelector('header').style.borderBottomColor = storm_mode ? 'var(--red)' : 'var(--border)';
+// ── counts + quiet banner ─────────────────────────────────────────────────────
+function updateCounts(){
+  const total = S.endpoints.length;
+  const quiet = S.endpoints.filter(e=>e.paused).length;
+  const active = total - quiet;
+  document.getElementById('activeCount').textContent = active;
+  document.getElementById('quietCount').textContent  = quiet;
+  document.getElementById('cAll').textContent    = total;
+  document.getElementById('cActive').textContent = active;
+  document.getElementById('cQuiet').textContent  = quiet;
+  document.getElementById('quietMetric').classList.toggle('has', quiet>0);
+
+  // Quiet banner — the persistent reminder so quiet machines are never forgotten.
+  const banner = document.getElementById('quietBanner');
+  const quietEps = S.endpoints.filter(e=>e.paused);
+  if (quietEps.length){
+    banner.classList.add('show');
+    document.getElementById('qbCount').textContent = quietEps.length;
+    const list = document.getElementById('qbList');
+    list.innerHTML='';
+    quietEps.forEach(e=>{
+      const t=document.createElement('span');
+      t.className='qb-tag'; t.textContent=e.name;
+      t.title='Click to locate · double-click to resume';
+      t.onclick=()=>jumpToCard(e.name);
+      t.ondblclick=()=>togglePause(e.name);
+      list.appendChild(t);
+    });
+  } else banner.classList.remove('show');
 }
 
 // ── endpoints grid ────────────────────────────────────────────────────────────
-function renderEndpoints() {
+function renderEndpoints(){
   const grid = document.getElementById('endpointsGrid');
-  const storm = S.status.storm_mode;
+  const hint = grid.querySelector('.empty-hint'); if (hint) hint.remove();
+  const storm = S.status.storm_mode, gPaused = S.status.global_paused;
 
-  // Preserve cards that already exist (DOM diff by name)
-  const existingNames = new Set([...grid.querySelectorAll('.ep-card')].map(c => c.dataset.name));
-  const newNames = new Set(S.endpoints.map(e => e.name));
+  const newNames = new Set(S.endpoints.map(e=>e.name));
+  [...grid.querySelectorAll('.ep-card')].forEach(c=>{ if(!newNames.has(c.dataset.name)) c.remove(); });
 
-  // Remove stale cards
-  existingNames.forEach(n => { if (!newNames.has(n)) grid.querySelector(`[data-name="${n}"]`).remove(); });
-
-  S.endpoints.forEach(ep => {
-    let card = grid.querySelector(`[data-name="${ep.name}"]`);
-    if (!card) {
-      card = buildCard(ep);
-      grid.appendChild(card);
-    }
-    updateCard(card, ep, storm);
+  S.endpoints.forEach(ep=>{
+    let card = grid.querySelector(`[data-name="${cssEsc(ep.name)}"]`);
+    if (!card){ card = buildCard(ep); grid.appendChild(card); }
+    updateCard(card, ep, storm, gPaused);
   });
+  applyFilter();
 }
 
-function buildCard(ep) {
-  const card = document.createElement('div');
-  card.className = 'ep-card';
-  card.dataset.name = ep.name;
-  card.innerHTML = `
+function buildCard(ep){
+  const card=document.createElement('div');
+  card.className='ep-card'; card.dataset.name=ep.name;
+  card.innerHTML=`
     <div class="ep-header">
       <div class="ep-dot"></div>
-      <div class="ep-name">${ep.name}</div>
-      <div class="ep-profile">${ep.profile}</div>
+      <div class="ep-name">${escHtml(ep.name)}</div>
+      <span class="ep-badge quiet" data-field="badge" style="display:none">quiet</span>
+      <div class="ep-profile">${escHtml(ep.profile)}</div>
       <div class="ep-actions">
-        <button class="icon-btn" title="Pause / Resume" onclick="togglePause('${ep.name}')">&#x23F8;</button>
-        <button class="icon-btn" title="Edit scenarios" onclick="openDrawer('${ep.name}')">&#x2699;</button>
+        <button class="icon-btn" data-act="pause" title="Pause" onclick="togglePause('${jsEsc(ep.name)}')">&#x23F8;</button>
+        <button class="icon-btn" title="Edit scenarios &amp; timing" onclick="openDrawer('${jsEsc(ep.name)}')">&#x2699;</button>
       </div>
     </div>
     <div class="ep-body">
       <div class="ep-stats">
         <div class="stat"><div class="stat-val" data-field="total">0</div><div class="stat-lbl">total events</div></div>
-        <div class="stat"><div class="stat-val" data-field="epm">0</div><div class="stat-lbl">events / min</div></div>
-        <div class="stat"><div class="stat-val" data-field="interval">—</div><div class="stat-lbl">interval (s)</div></div>
+        <div class="stat"><div class="stat-val live" data-field="epm">0</div><div class="stat-lbl">events / min</div></div>
+        <div class="stat"><div class="stat-val" data-field="interval">&mdash;</div><div class="stat-lbl">interval (s)</div></div>
       </div>
+      <div class="activity"><div class="activity-bar" data-field="bar"></div></div>
       <div class="scenario-pills" data-field="pills"></div>
     </div>`;
   return card;
 }
 
-function updateCard(card, ep, storm) {
-  card.className = 'ep-card' + (ep.paused ? ' paused' : '') + (storm && !ep.paused ? ' storm-card' : '');
+function updateCard(card, ep, storm, gPaused){
+  const quiet = ep.paused;
+  const halted = !quiet && gPaused;
+  card.className = 'ep-card'
+    + (quiet?' quiet':'')
+    + (halted?' halted':'')
+    + (storm && !quiet && !gPaused ?' storm-card':'');
+
   const dot = card.querySelector('.ep-dot');
-  dot.className = 'ep-dot' + (storm && !ep.paused ? ' storm' : ep.paused ? ' paused' : '');
+  dot.className = 'ep-dot' + (quiet?' paused':halted?' halted':storm?' storm':'');
+
+  card.querySelector('[data-field=badge]').style.display = quiet?'':'none';
   card.querySelector('[data-field=total]').textContent = ep.total_events.toLocaleString();
-  card.querySelector('[data-field=epm]').textContent   = ep.events_last_minute;
-  card.querySelector('[data-field=interval]').textContent =
-    `${ep.interval_seconds[0]}–${ep.interval_seconds[1]}`;
+  const epmEl = card.querySelector('[data-field=epm]');
+  epmEl.textContent = quiet?'—':ep.events_last_minute.toLocaleString();
+  epmEl.classList.toggle('live', !quiet && ep.events_last_minute>0);
+  card.querySelector('[data-field=interval]').textContent = `${ep.interval_seconds[0]}–${ep.interval_seconds[1]}`;
 
-  // Pause/resume icon
-  const btn = card.querySelector('.icon-btn');
-  btn.title   = ep.paused ? 'Resume' : 'Pause';
-  btn.innerHTML = ep.paused ? '&#x25B6;' : '&#x23F8;';
+  const bar = card.querySelector('[data-field=bar]');
+  bar.style.width = quiet ? '0%' : Math.min(100, Math.round((ep.events_last_minute/S.maxEpm)*100)) + '%';
 
-  // Scenario pills (only active ones)
+  const btn = card.querySelector('[data-act=pause]');
+  btn.title = quiet?'Resume':'Pause';
+  btn.innerHTML = quiet?'&#x25B6;':'&#x23F8;';
+
   const pills = card.querySelector('[data-field=pills]');
-  pills.innerHTML = '';
-  Object.entries(ep.scenarios)
-    .filter(([, w]) => w > 0)
-    .sort(([,a],[,b]) => b - a)
-    .slice(0, 8)
-    .forEach(([name, weight]) => {
-      const meta = S.scenarios.find(s => s.name === name) || {};
-      const color = catColor(meta.category);
-      const pill = document.createElement('span');
-      pill.className = 'sc-pill';
-      pill.style.cssText = `background:${color}22;color:${color};border-color:${color}44;`;
-      pill.textContent = (meta.label || name).replace(/^(ssh|web|lateral|sudo|pam|generic|kernel|system|apache|nginx|openvpn|suricata|port|new|cron|sensitive|large|iptables|process)\s*/i, '') + ` ×${weight}`;
-      pills.appendChild(pill);
-    });
+  const active = Object.entries(ep.scenarios).filter(([,w])=>w>0).sort(([,a],[,b])=>b-a);
+  pills.innerHTML='';
+  active.slice(0,6).forEach(([name,weight])=>{
+    const meta = S.scenarios.find(s=>s.name===name)||{};
+    const color = catColor(meta.category);
+    const pill=document.createElement('span');
+    pill.className='sc-pill';
+    pill.style.cssText=`background:${color}22;color:${color};border-color:${color}44;`;
+    pill.textContent = `${shortLabel(meta,name)} ×${weight}`;
+    pills.appendChild(pill);
+  });
+  if (active.length>6){
+    const more=document.createElement('span');
+    more.className='sc-more'; more.textContent=`+${active.length-6} more`;
+    pills.appendChild(more);
+  }
+}
+
+// ── grid filtering / search ─────────────────────────────────────────────────
+function setFilter(f){
+  S.gridFilter=f;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.filter===f));
+  applyFilter();
+}
+function applyFilter(){
+  S.search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const epByName = Object.fromEntries(S.endpoints.map(e=>[e.name,e]));
+  let shown=0;
+  document.querySelectorAll('.ep-card').forEach(card=>{
+    const ep = epByName[card.dataset.name]; if(!ep){ card.classList.add('hidden'); return; }
+    const passF = S.gridFilter==='all' || (S.gridFilter==='quiet'?ep.paused:!ep.paused);
+    const passS = !S.search || ep.name.toLowerCase().includes(S.search) || ep.profile.toLowerCase().includes(S.search);
+    const show = passF && passS;
+    card.classList.toggle('hidden', !show);
+    if (show) shown++;
+  });
+  const grid=document.getElementById('endpointsGrid');
+  let empty=grid.querySelector('.empty-hint');
+  if (shown===0 && S.endpoints.length){
+    if(!empty){ empty=document.createElement('div'); empty.className='empty-hint'; grid.appendChild(empty); }
+    empty.textContent = S.gridFilter==='quiet' ? 'No quiet machines — everything is active.' : 'No machines match this filter.';
+  } else if (empty) empty.remove();
+}
+function jumpToCard(name){
+  setFilter('all');
+  document.getElementById('searchBox').value=''; applyFilter();
+  const card=document.querySelector(`.ep-card[data-name="${cssEsc(name)}"]`);
+  if(card){ card.scrollIntoView({behavior:'smooth',block:'center'});
+    card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
 }
 
 // ── presets ───────────────────────────────────────────────────────────────────
-function renderPresets() {
-  const bar = document.getElementById('presetBar');
-  const existing = bar.querySelectorAll('.preset-btn');
-  existing.forEach(e => e.remove());
-  S.presets.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'preset-btn';
-    btn.dataset.name = p.name;
-    btn.style.cssText = `color:${p.color};border-color:${p.color}66;background:${p.color}22;`;
-    btn.innerHTML = `${p.icon || '▶'} ${p.label || p.name}`;
-    btn.title = p.description || '';
-    btn.onclick = () => applyPreset(p.name);
+function renderPresets(){
+  const bar=document.getElementById('presetBar');
+  bar.querySelectorAll('.preset-btn').forEach(e=>e.remove());
+  S.presets.forEach(p=>{
+    const btn=document.createElement('button');
+    btn.className='preset-btn'; btn.dataset.name=p.name;
+    btn.style.cssText=`color:${p.color};border-color:${p.color}66;background:${p.color}1f;`;
+    btn.innerHTML=`${p.icon||'▶'} ${escHtml(p.label||p.name)}`;
+    btn.title=p.description||'';
+    btn.onclick=()=>applyPreset(p.name);
     bar.appendChild(btn);
   });
 }
-
-async function applyPreset(name) {
+async function applyPreset(name){
   await POST(`/api/presets/${name}`);
-  toast(`Preset "${name}" applied to all endpoints`);
+  toast(`Preset "${name}" applied to all machines`);
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.name===name));
   await refresh();
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.name === name));
 }
 
-// ── global controls ───────────────────────────────────────────────────────────
-async function globalAction(action) {
+// ── global controls ─────────────────────────────────────────────────────────
+async function globalAction(action){
   await POST(`/api/global/${action}`);
-  toast(action === 'pause' ? 'All endpoints paused' : 'All endpoints resumed');
+  S.endpoints.forEach(e=>e.paused = action==='pause');  // optimistic
+  updateCounts(); renderEndpoints();
+  toast(action==='pause'?'All machines paused':'All machines resumed', action==='pause'?'warn':'ok');
+  await refresh();
+}
+let _stormActive=false;
+async function toggleStorm(){
+  _stormActive=!_stormActive;
+  await POST(_stormActive?'/api/global/storm':'/api/global/normal');
+  toast(_stormActive?'⚡ Storm mode activated':'Storm mode deactivated', _stormActive?'warn':'ok');
   await refresh();
 }
 
-let _stormActive = false;
-async function toggleStorm() {
-  _stormActive = !_stormActive;
-  await POST(_stormActive ? '/api/global/storm' : '/api/global/normal');
-  toast(_stormActive ? '⚡ STORM MODE activated' : 'Storm mode deactivated');
+// ── per-endpoint pause (optimistic) ───────────────────────────────────────────
+async function togglePause(name){
+  const ep=S.endpoints.find(e=>e.name===name); if(!ep) return;
+  const next=!ep.paused; ep.paused=next;        // optimistic local update
+  updateCounts(); renderEndpoints();
+  toast(next?`\u{1F507} ${name} is now quiet`:`▶ ${name} resumed`, next?'warn':'ok');
+  try{ await POST(`/api/endpoints/${name}/${next?'pause':'resume'}`); }catch(_){}
   await refresh();
 }
-
-// ── per-endpoint pause ────────────────────────────────────────────────────────
-async function togglePause(name) {
-  const ep = S.endpoints.find(e => e.name === name);
-  await POST(`/api/endpoints/${name}/${ep?.paused ? 'resume' : 'pause'}`);
+async function resumeAllQuiet(){
+  const quiet=S.endpoints.filter(e=>e.paused);
+  if(!quiet.length) return;
+  quiet.forEach(e=>e.paused=false); updateCounts(); renderEndpoints();
+  await Promise.all(quiet.map(e=>POST(`/api/endpoints/${e.name}/resume`).catch(()=>{})));
+  toast(`Resumed ${quiet.length} quiet machine(s)`);
   await refresh();
 }
 
 // ── drawer ────────────────────────────────────────────────────────────────────
-function openDrawer(name) {
-  const ep = S.endpoints.find(e => e.name === name);
-  if (!ep) return;
-  S.currentEp = ep;
-  document.getElementById('drawerTitle').textContent = ep.name;
-  document.getElementById('drawerSub').textContent   = ep.profile;
+function openDrawer(name){
+  const ep=S.endpoints.find(e=>e.name===name); if(!ep) return;
+  S.currentEp=ep;
+  document.getElementById('drawerTitle').textContent=ep.name;
+  document.getElementById('drawerSub').textContent=ep.profile + (ep.paused?'  ·  \u{1F507} quiet':'');
   renderDrawerBody(ep);
   document.getElementById('drawerOverlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
 }
-
-function closeDrawer() {
+function closeDrawer(){
   document.getElementById('drawerOverlay').classList.remove('open');
   document.getElementById('drawer').classList.remove('open');
-  S.currentEp = null;
+  S.currentEp=null;
 }
-
-function renderDrawerBody(ep) {
-  const body = document.getElementById('drawerBody');
-
-  // Build scenario weight section
-  let html = `<div class="drawer-section">
-    <div class="drawer-section-title">Scenario Weights <small style="color:var(--muted);font-size:.65rem;">(0 = disabled)</small></div>`;
-
-  // Group by category
-  const byCat = {};
-  S.scenarios.forEach(s => {
-    const cat = s.category || 'noise';
-    (byCat[cat] = byCat[cat] || []).push(s);
-  });
-
-  Object.entries(byCat).sort().forEach(([cat, list]) => {
-    const color = catColor(cat);
-    html += `<div style="margin-bottom:.75rem;">
-      <div style="font-size:.65rem;color:${color};text-transform:uppercase;margin-bottom:.35rem;">${cat}</div>`;
-    list.forEach(s => {
-      const w = ep.scenarios[s.name] ?? 0;
-      html += `<div class="slider-row">
-        <span class="slider-name" title="${s.description || s.name}">${s.label || s.name}</span>
+function renderDrawerBody(ep){
+  const body=document.getElementById('drawerBody');
+  let html=`<div class="drawer-section">
+    <div class="drawer-section-title">Scenario Weights <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(0 = off)</span></div>`;
+  const byCat={};
+  S.scenarios.forEach(s=>{ const c=s.category||'noise'; (byCat[c]=byCat[c]||[]).push(s); });
+  Object.entries(byCat).sort().forEach(([cat,list])=>{
+    const color=catColor(cat);
+    html+=`<div class="cat-group"><div class="cat-label" style="color:${color}">${cat}</div>`;
+    list.forEach(s=>{
+      const w=ep.scenarios[s.name]??0;
+      html+=`<div class="slider-row">
+        <span class="slider-name" title="${escHtml(s.description||s.name)}">${escHtml(s.label||s.name)}</span>
         <input class="slider-range" type="range" min="0" max="50" step="1" value="${w}"
-               data-sc="${s.name}" oninput="this.nextElementSibling.textContent=this.value">
-        <span class="slider-val">${w}</span>
-      </div>`;
+               data-sc="${escHtml(s.name)}" oninput="this.nextElementSibling.textContent=this.value">
+        <span class="slider-val">${w}</span></div>`;
     });
-    html += `</div>`;
+    html+=`</div>`;
   });
-  html += `</div>`;
+  html+=`</div>`;
 
-  // Timing section
-  const [imin, imax] = ep.interval_seconds;
-  const bp = Math.round((ep.burst_probability || 0) * 100);
-  const [bmin, bmax] = ep.burst_size;
-
-  html += `<div class="drawer-section">
+  const [imin,imax]=ep.interval_seconds;
+  const bp=Math.round((ep.burst_probability||0)*100);
+  const [bmin,bmax]=ep.burst_size;
+  html+=`<div class="drawer-section">
     <div class="drawer-section-title">Timing</div>
-    <div class="double-slider" style="margin-bottom:.6rem;">
-      <label>Interval (s)&nbsp;min</label>
-      <input type="number" id="iMin" min="0.5" max="300" step="0.5" value="${imin}">
+    <div class="double-slider"><label>Interval (s) min</label>
+      <input class="num-in" type="number" id="iMin" min="0.5" max="300" step="0.5" value="${imin}">
       <label>max</label>
-      <input type="number" id="iMax" min="1"   max="600" step="1"   value="${imax}">
-    </div>
-    <div class="prob-row">
-      <label>Burst probability</label>
+      <input class="num-in" type="number" id="iMax" min="1" max="600" step="1" value="${imax}"></div>
+    <div class="prob-row"><label>Burst probability</label>
       <input type="range" min="0" max="100" step="5" value="${bp}"
              oninput="document.getElementById('bpVal').textContent=this.value+'%'" style="flex:1;">
-      <span id="bpVal" style="width:36px;text-align:right;color:var(--accent);">${bp}%</span>
-    </div>
-    <div class="double-slider">
-      <label>Burst size&nbsp;min</label>
-      <input type="number" id="bMin" min="1" max="50" step="1" value="${bmin}">
+      <span id="bpVal" class="slider-val" style="width:38px;">${bp}%</span></div>
+    <div class="double-slider"><label>Burst size min</label>
+      <input class="num-in" type="number" id="bMin" min="1" max="50" step="1" value="${bmin}">
       <label>max</label>
-      <input type="number" id="bMax" min="1" max="100" step="1" value="${bmax}">
-    </div>
+      <input class="num-in" type="number" id="bMax" min="1" max="100" step="1" value="${bmax}"></div>
   </div>`;
-
-  body.innerHTML = html;
+  body.innerHTML=html;
 }
-
-async function saveDrawer() {
-  const ep = S.currentEp;
-  if (!ep) return;
-
-  const scenarios = {};
-  document.querySelectorAll('#drawerBody [data-sc]').forEach(el => {
-    scenarios[el.dataset.sc] = parseInt(el.value, 10);
-  });
-
-  const iMin = parseFloat(document.getElementById('iMin').value);
-  const iMax = parseFloat(document.getElementById('iMax').value);
-  const bpEl = document.querySelector('#drawerBody .prob-row input[type=range]');
-  const bp   = parseInt(bpEl.value, 10) / 100;
-  const bMin = parseInt(document.getElementById('bMin').value, 10);
-  const bMax = parseInt(document.getElementById('bMax').value, 10);
-
-  await PATCH(`/api/endpoints/${ep.name}`, {
+async function saveDrawer(){
+  const ep=S.currentEp; if(!ep) return;
+  const scenarios={};
+  document.querySelectorAll('#drawerBody [data-sc]').forEach(el=>{ scenarios[el.dataset.sc]=parseInt(el.value,10); });
+  const iMin=parseFloat(document.getElementById('iMin').value);
+  const iMax=parseFloat(document.getElementById('iMax').value);
+  const bp=parseInt(document.querySelector('#drawerBody .prob-row input[type=range]').value,10)/100;
+  const bMin=parseInt(document.getElementById('bMin').value,10);
+  const bMax=parseInt(document.getElementById('bMax').value,10);
+  await PATCH(`/api/endpoints/${ep.name}`,{
     scenarios,
-    interval_seconds: [Math.min(iMin, iMax), Math.max(iMin, iMax)],
-    burst_probability: bp,
-    burst_size: [Math.min(bMin, bMax), Math.max(bMin, bMax)],
+    interval_seconds:[Math.min(iMin,iMax),Math.max(iMin,iMax)],
+    burst_probability:bp,
+    burst_size:[Math.min(bMin,bMax),Math.max(bMin,bMax)],
   });
-  toast(`✓ ${ep.name} updated`);
-  closeDrawer();
-  await refresh();
+  toast(`${ep.name} updated`);
+  closeDrawer(); await refresh();
 }
 
-// ── live feed ─────────────────────────────────────────────────────────────────
-const MAX_FEED = 200;
-const _feed = [];
-
-function connectSSE() {
-  const source = new EventSource('/api/events/stream');
-  source.onmessage = ev => {
-    try { appendEvent(JSON.parse(ev.data)); } catch(_) {}
-  };
-  source.onerror = () => setTimeout(connectSSE, 3000);
+// ── live feed (batched for smoothness) ─────────────────────────────────────────
+const MAX_FEED=200;
+let _pending=[], _rafQueued=false;
+function connectSSE(){
+  const src=new EventSource('/api/events/stream');
+  src.onmessage=ev=>{ try{ queueEvent(JSON.parse(ev.data)); }catch(_){} };
+  src.onerror=()=>setTimeout(connectSSE,3000);
 }
-
-function appendEvent(ev) {
-  _feed.push(ev);
-  if (_feed.length > MAX_FEED) _feed.shift();
-  S.feedTotal++;
-  document.getElementById('feedCount').textContent = S.feedTotal.toLocaleString();
-  renderFeedItem(ev);
+function queueEvent(ev){
+  S.feedTotal++; _pending.push(ev);
+  if(!_rafQueued){ _rafQueued=true; requestAnimationFrame(flushFeed); }
 }
-
-function renderFeedItem(ev) {
-  if (S.feedFilter && ev.endpoint !== S.feedFilter) return;
-
-  const meta  = S.scenarios.find(s => s.name === ev.scenario) || {};
-  const color = catColor(meta.category);
-  const label = (meta.label || ev.scenario)
-    .replace(/^(ssh|web|lateral|sudo|pam|generic|kernel|system|apache|nginx|openvpn|suricata|port|new|cron|sensitive|large|iptables|process)\s*/i, '');
-
-  const ts = new Date(ev.ts).toLocaleTimeString();
-  const item = document.createElement('div');
-  item.className = 'feed-item';
-  item.style.borderLeftColor = color;
-  item.dataset.endpoint = ev.endpoint;
-  item.innerHTML = `
-    <span class="feed-badge" style="background:${color}33;color:${color};">${label}</span>
-    <span class="feed-meta">${ev.endpoint} &middot; ${ts}</span>
+function flushFeed(){
+  _rafQueued=false;
+  const list=document.getElementById('feedList');
+  const emptyEl=document.getElementById('feedEmpty'); if(emptyEl) emptyEl.remove();
+  const batch=_pending; _pending=[];
+  const frag=document.createDocumentFragment();
+  let rendered=0;
+  batch.forEach(ev=>{ const node=buildFeedItem(ev); if(node){ frag.appendChild(node); rendered++; } });
+  if(rendered){
+    list.appendChild(frag);
+    while(list.children.length>MAX_FEED) list.removeChild(list.firstChild);
+    if(S.autoScroll) list.scrollTop=list.scrollHeight;
+  }
+  document.getElementById('feedCount').textContent=S.feedTotal.toLocaleString();
+}
+function buildFeedItem(ev){
+  if(S.feedFilter && ev.endpoint!==S.feedFilter) return null;
+  const meta=S.scenarios.find(s=>s.name===ev.scenario)||{};
+  const color=catColor(meta.category);
+  const label=shortLabel(meta, ev.scenario);
+  const ts=new Date(ev.ts).toLocaleTimeString();
+  const item=document.createElement('div');
+  item.className='feed-item'; item.style.borderLeftColor=color; item.dataset.endpoint=ev.endpoint;
+  item.innerHTML=`
+    <span class="feed-badge" style="background:${color}33;color:${color};">${escHtml(label)}</span>
+    <span class="feed-meta">${escHtml(ev.endpoint)} · ${ts}</span>
     <span class="feed-msg" title="${escHtml(ev.message)}">${escHtml(ev.message)}</span>`;
-
-  const list = document.getElementById('feedList');
-  list.appendChild(item);
-
-  // Trim DOM
-  while (list.children.length > MAX_FEED) list.removeChild(list.firstChild);
-
-  if (S.autoScroll) list.scrollTop = list.scrollHeight;
+  return item;
 }
-
-function filterFeed() {
-  S.feedFilter = document.getElementById('feedFilter').value;
-  const list = document.getElementById('feedList');
-  [...list.children].forEach(el => {
-    el.style.display = (!S.feedFilter || el.dataset.endpoint === S.feedFilter) ? '' : 'none';
+function filterFeed(){
+  S.feedFilter=document.getElementById('feedFilter').value;
+  document.querySelectorAll('#feedList .feed-item').forEach(el=>{
+    el.style.display=(!S.feedFilter||el.dataset.endpoint===S.feedFilter)?'':'none';
   });
 }
-
-function updateFeedFilter() {
-  const sel = document.getElementById('feedFilter');
-  const cur = sel.value;
-  const names = S.endpoints.map(e => e.name);
-  // Add missing options
-  names.forEach(n => {
-    if (!sel.querySelector(`option[value="${n}"]`)) {
-      const opt = document.createElement('option');
-      opt.value = n; opt.textContent = n;
-      sel.appendChild(opt);
+function updateFeedFilter(){
+  const sel=document.getElementById('feedFilter'), cur=sel.value;
+  S.endpoints.map(e=>e.name).forEach(n=>{
+    if(!sel.querySelector(`option[value="${cssEsc(n)}"]`)){
+      const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o);
     }
   });
-  sel.value = cur;
+  sel.value=cur;
+}
+function toggleScroll(){
+  S.autoScroll=!S.autoScroll;
+  const btn=document.getElementById('scrollBtn');
+  btn.className='toggle-autoscroll'+(S.autoScroll?' on':'');
+  btn.innerHTML=S.autoScroll?'&#x2193; auto':'&#x23F8; paused';
+  if(S.autoScroll) document.getElementById('feedList').scrollTop=1e9;
 }
 
-function toggleScroll() {
-  S.autoScroll = !S.autoScroll;
-  const btn = document.getElementById('scrollBtn');
-  btn.className = 'toggle-autoscroll' + (S.autoScroll ? ' on' : '');
-  btn.innerHTML = S.autoScroll ? '&#x2193; auto' : '&#x23F8; paused';
-  if (S.autoScroll) document.getElementById('feedList').scrollTop = 1e9;
-}
+// ── escaping ──────────────────────────────────────────────────────────────────
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function jsEsc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function cssEsc(s){return (window.CSS&&CSS.escape)?CSS.escape(s):String(s).replace(/["\\]/g,'\\$&');}
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── boot ──────────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
